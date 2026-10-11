@@ -4,9 +4,13 @@
 #
 # The action is an emote slash command (/laugh), a spell name (cast if the
 # player knows it), or both: "Feign Death /lie" casts Feign Death if known,
-# otherwise does /lie. Lines are matched ignoring punctuation and case.
-# Stage directions like [Kisses her.] and [Hero swoons.] are mapped
-# automatically, so only add things the text doesn't already say.
+# otherwise does /lie. Add "@Role" to direct it at whoever plays that role:
+# "/kiss @Beatrice". Lines are matched ignoring punctuation and case.
+#
+# Stage directions like [Kisses her.] and [Hero swoons.] get an emote
+# automatically. They can be matched here by their direction text (e.g. to
+# give them a target), since they have no words.
 
-BEATRICE  | I wonder that you will still be talking | /sigh
-BENEDICK  | What, my dear Lady Disdain               | /bow
+BEATRICE  | I wonder that you will still be talking | /sigh @Benedick
+BENEDICK  | What, my dear Lady Disdain               | /bow @Beatrice
+BENEDICK  | Kisses her                               | /kiss @Beatrice

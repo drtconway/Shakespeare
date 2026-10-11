@@ -40,6 +40,10 @@ casting `Feign Death` when someone dies.
   from someone else.
 - **Speak** / **Perform** delivers your cue. It can also be bound to a key under
   Key Bindings → AddOns → Shakespeare.
+- **Emote** does the emote or spell attached to your line. It works for the line you've just spoken,
+  until someone delivers the next line, or for the line you're about to speak. Tick **Auto emotes**
+  to have **Speak** do it for you. Actions with no words (e.g. *Hero swoons*) always happen when
+  you click **Perform**.
 - **Prompt** appears when another actor is more than 5 seconds late. It pokes them.
 - `<<` and `>>` go to the start or end of the scene. Click again to go on to the previous or next scene.
   `<` and `>` step back or forward one line. These move the whole group.
@@ -102,6 +106,9 @@ Each play is a list of *cues*. A cue is one click of the deliver button:
 - `d` is a stage direction. It is shown on the teleprompter and never spoken.
 - `e` and `s` are an emote and a spell. Directions such as *Kisses her*, *Dies*, *Sleeps* and
   *Hero swoons* are mapped automatically. Add any others in `plays/<id>.actions`.
+- `at` is the role an emote or spell is aimed at, written `/kiss @Beatrice` in the actions file.
+  When the line is delivered, the addon targets the player cast in that role, does the emote, then
+  restores your previous target. If nobody has the role, the emote isn't aimed at anyone.
 - `scenes` gives the index of each scene's first cue, so a rehearsal can start mid-play.
 - `roles` lists every speaking part, largest first, with a cue count for the casting screen.
 

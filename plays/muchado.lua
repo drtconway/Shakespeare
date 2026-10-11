@@ -52,7 +52,8 @@ ns.plays["muchado"] = {
   },
   -- r = roles who may speak it, t = text (<= 255 bytes, one chat message),
   -- d = stage direction (shown, never spoken), h = scene heading,
-  -- e = emote slash command, s = spell to cast if known (else e is used).
+  -- e = emote slash command, s = spell to cast if known (else e is used),
+  -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {
     { d = "Act 1, Scene 1. Before Leonato’s House.", h = true },
@@ -120,8 +121,8 @@ ns.plays["muchado"] = {
     { r = {"DON PEDRO"}, t = "Truly the lady fathers herself." },
     { r = {"DON PEDRO"}, t = "Be happy, lady, for you are like an honourable father." },
     { r = {"BENEDICK"}, t = "If Signior Leonato be her father, she would not have his head on her shoulders for all Messina, as like him as she is." },
-    { r = {"BEATRICE"}, t = "I wonder that you will still be talking, Signior Benedick: nobody marks you.", e = "/sigh" },
-    { r = {"BENEDICK"}, t = "What! my dear Lady Disdain, are you yet living?", e = "/bow" },
+    { r = {"BEATRICE"}, t = "I wonder that you will still be talking, Signior Benedick: nobody marks you.", e = "/sigh", at = "BENEDICK" },
+    { r = {"BENEDICK"}, t = "What! my dear Lady Disdain, are you yet living?", e = "/bow", at = "BEATRICE" },
     { r = {"BEATRICE"}, t = "Is it possible Disdain should die while she hath such meet food to feed it as Signior Benedick?" },
     { r = {"BEATRICE"}, t = "Courtesy itself must convert to disdain if you come in her presence." },
     { r = {"BENEDICK"}, t = "Then is courtesy a turncoat." },
@@ -2015,7 +2016,7 @@ ns.plays["muchado"] = {
     { r = {"BENEDICK"}, t = "I will have thee; but, by this light, I take thee for pity." },
     { r = {"BEATRICE"}, t = "I would not deny you; but, by this good day, I yield upon great persuasion, and partly to save your life, for I was told you were in a consumption." },
     { r = {"BENEDICK"}, t = "Peace! I will stop your mouth." },
-    { r = {"BENEDICK"}, d = "Kisses her", e = "/kiss" },
+    { r = {"BENEDICK"}, d = "Kisses her", e = "/kiss", at = "BEATRICE" },
     { r = {"DON PEDRO"}, t = "How dost thou, Benedick, the married man?" },
     { r = {"BENEDICK"}, t = "I’ll tell thee what, Prince; a college of witcrackers cannot flout me out of my humour." },
     { r = {"BENEDICK"}, t = "Dost thou think I care for a satire or an epigram?" },

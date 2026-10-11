@@ -50,7 +50,8 @@ ns.plays["midsummer"] = {
   },
   -- r = roles who may speak it, t = text (<= 255 bytes, one chat message),
   -- d = stage direction (shown, never spoken), h = scene heading,
-  -- e = emote slash command, s = spell to cast if known (else e is used).
+  -- e = emote slash command, s = spell to cast if known (else e is used),
+  -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {
     { d = "Act 1, Scene 1. Athens. A room in the Palace of Theseus", h = true },

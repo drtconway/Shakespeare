@@ -10,6 +10,7 @@ local CAST_PATTERN = "^I will play the role of (.+)!$"
 local db                   -- ShakespeareDB: { playId, pos, cast = { [roleId] = playerName } }
 local lastDelivery = 0     -- GetTime() of the last delivered cue
 local promptedAt = 0       -- GetTime() of the last prompt we sent
+local myLastCue            -- index of the last cue we delivered
 
 local function Print(...)
 	print("|cffd4a017Shakespeare:|r", ...)
@@ -131,6 +132,24 @@ function ns.Prompted()
 	promptedAt = GetTime()
 end
 
+local function HasAction(cue)
+	return cue and cue.t and (cue.e or cue.s)
+end
+
+-- The spoken line whose emote or spell the Emote button performs: the line
+-- we just delivered, until anyone delivers the next cue; otherwise the line
+-- we are about to deliver.
+function ns.EmoteCue()
+	local last = myLastCue and ns.Play().cues[myLastCue]
+	if HasAction(last) and ns.NextActionable(myLastCue + 1) == db.pos then
+		return last
+	end
+	local cue = ns.CurrentCue()
+	if HasAction(cue) and ns.CanDeliver(cue) then
+		return cue
+	end
+end
+
 ---------------------------------------------------------------------------
 -- Addon messages
 ---------------------------------------------------------------------------
@@ -177,11 +196,13 @@ end
 local function StartPlay(id)
 	db.playId = id
 	wipe(db.cast)
+	myLastCue = nil
 	SetPos(1)
 end
 
 -- Called after the deliver button has spoken the line.
 function ns.Deliver(n)
+	myLastCue = n
 	ApplyCue(n)
 	Send("CUE", n)
 end
@@ -362,6 +383,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 		ShakespeareDB = ShakespeareDB or {}
 		db = ShakespeareDB
 		db.cast = db.cast or {}
+		db.autoEmote = db.autoEmote or false
 		if not ns.plays[db.playId] then
 			db.playId = ns.plays.muchado and "muchado" or next(ns.plays)
 			db.pos = 1

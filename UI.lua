@@ -1,7 +1,7 @@
 -- The teleprompter window, the deliver and prompt buttons, and the cast list.
 local _, ns = ...
 
-local WIDTH, HEIGHT = 600, 440
+local WIDTH, HEIGHT = 660, 440
 local ROWS = 8
 local PROMPT_EMOTES = { "/poke", "/cough", "/sigh" }
 local BACKDROP_TEMPLATE = BackdropTemplateMixin and "BackdropTemplate" or nil
@@ -24,7 +24,7 @@ _G["BINDING_NAME_CLICK ShakespeareDeliverButton:LeftButton"] = "Deliver the next
 
 local DROPDOWN_ARROW = " |TInterface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up:18|t"
 
-local frame, script, rows, deliver, prompt, castPanel, titleButton, playMenu
+local frame, script, rows, deliver, emote, prompt, castPanel, titleButton, playMenu
 local castRows = {}
 
 -- When the ActionButtonUseKeyDown CVar exists, secure buttons act on either
@@ -57,7 +57,9 @@ local function ActionText(cue)
 	if cue.s then parts[#parts + 1] = cue.s end
 	if cue.e then parts[#parts + 1] = cue.e end
 	if #parts == 0 then return "" end
-	return "  |cff66bbff<" .. table.concat(parts, " or ") .. ">|r"
+	local text = table.concat(parts, " or ")
+	if cue.at then text = text .. " at " .. ns.RoleName(cue.at) end
+	return "  |cff66bbff<" .. text .. ">|r"
 end
 
 local function DirectionText(d)
@@ -77,10 +79,37 @@ local function CueText(cue)
 	return DirectionText(cue.d)
 end
 
--- What the deliver button's secure macro does for a cue.
+-- The secure macro that performs a cue's spell, if known, or else its emote.
+-- If the cue is directed at a role, target that role's player for it and
+-- then restore the previous target.
 local function ActionMacro(cue)
-	if cue.s and ns.KnowsSpell(cue.s) then return "/cast " .. cue.s end
-	return cue.e or ""
+	local action
+	if cue.s and ns.KnowsSpell(cue.s) then
+		action = "/cast " .. cue.s
+	else
+		action = cue.e
+	end
+	if not action then return "" end
+	if not cue.at then return action end
+
+	local player = ns.State().cast[cue.at]
+	if player and player ~= ns.Me() then
+		return "/target " .. player .. "\n" .. action .. "\n/targetlasttarget"
+	end
+	-- Nobody to aim at: don't aim it at whoever happens to be targeted.
+	return "/cleartarget\n" .. action .. "\n/targetlasttarget"
+end
+
+local function ActionLabel(cue)
+	if cue.s and ns.KnowsSpell(cue.s) then return cue.s end
+	return cue.e
+end
+
+-- What the deliver button does besides speaking. Stage business (no words)
+-- always performs its action; spoken lines only with auto emotes on.
+local function DeliverMacro(cue)
+	if not cue.t or ns.State().autoEmote then return ActionMacro(cue) end
+	return ""
 end
 
 ---------------------------------------------------------------------------
@@ -94,8 +123,13 @@ local function RefreshSecure()
 	local cue = ns.CurrentCue()
 	local canDeliver = ns.CanDeliver(cue)
 
-	deliver:SetAttribute("macrotext", canDeliver and ActionMacro(cue) or "")
+	deliver:SetAttribute("macrotext", canDeliver and DeliverMacro(cue) or "")
 	deliver:SetEnabled(canDeliver)
+
+	local emoteCue = ns.EmoteCue()
+	emote:SetAttribute("macrotext", emoteCue and ActionMacro(emoteCue) or "")
+	emote:SetEnabled(emoteCue ~= nil)
+	emote:SetText(emoteCue and ActionLabel(emoteCue) or "Emote")
 	if not cue then
 		deliver:SetText("Finis")
 	elseif not canDeliver then
@@ -390,7 +424,7 @@ function ns.CreateUI()
 
 	script = CreateFrame("Frame", nil, frame)
 	script:SetPoint("TOPLEFT", 18, -60)
-	script:SetPoint("BOTTOMRIGHT", -18, 50)
+	script:SetPoint("BOTTOMRIGHT", -18, 74)
 	script:SetClipsChildren(true)
 
 	rows = {}
@@ -432,8 +466,25 @@ function ns.CreateUI()
 		function() ns.ConfirmReset() end)
 	resetButton:SetPoint("LEFT", castButton, "RIGHT", 2, 0)
 
-	deliver = SecureButton("ShakespeareDeliverButton", 140)
-	deliver:SetPoint("BOTTOMRIGHT", -18, 17)
+	local autoEmote = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+	autoEmote:SetSize(24, 24)
+	autoEmote:SetChecked(ns.State().autoEmote)
+	autoEmote:SetScript("OnClick", function(self)
+		ns.State().autoEmote = self:GetChecked() and true or false
+		RefreshSecure()
+	end)
+	autoEmote:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine("Auto emotes")
+		GameTooltip:AddLine("Speak also does the line's emote or spell. When off, use the Emote button.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	autoEmote:SetScript("OnLeave", GameTooltip_Hide)
+	local autoLabel = autoEmote:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	autoLabel:SetPoint("LEFT", autoEmote, "RIGHT", 0, 1)
+	autoLabel:SetText("Auto emotes")
+
+	deliver = SecureButton("ShakespeareDeliverButton", 120)
 	deliver:SetScript("PreClick", function(self, _, down)
 		self.cueIndex = nil
 		if not ClickIsLive(down) then return end
@@ -451,8 +502,31 @@ function ns.CreateUI()
 		end
 	end)
 
-	prompt = SecureButton("ShakespearePromptButton", 140)
+	-- Performs the emote or spell of the line just spoken (or about to be).
+	emote = SecureButton("ShakespeareEmoteButton", 110)
+	emote:SetText("Emote")
+	emote:SetScript("OnEnter", function(self)
+		local cue = ns.EmoteCue()
+		if not cue then return end
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:AddLine(ActionLabel(cue))
+		if cue.at then
+			local player = ns.State().cast[cue.at]
+			GameTooltip:AddLine("At " .. ns.RoleName(cue.at) .. (player and (" (" .. player .. ")") or " (not cast)"),
+				1, 1, 1)
+		end
+		GameTooltip:Show()
+	end)
+	emote:SetScript("OnLeave", GameTooltip_Hide)
+
+	prompt = SecureButton("ShakespearePromptButton", 110)
+
+	-- Right-hand group, right to left: Emote, Speak, Prompt; the auto emotes
+	-- checkbox sits above Emote.
+	emote:SetPoint("BOTTOMRIGHT", -18, 17)
+	deliver:SetPoint("RIGHT", emote, "LEFT", -6, 0)
 	prompt:SetPoint("RIGHT", deliver, "LEFT", -6, 0)
+	autoEmote:SetPoint("BOTTOMLEFT", emote, "TOPLEFT", 0, 2)
 	prompt:SetScript("PostClick", function(_, _, down)
 		if ClickIsLive(down) then
 			ns.Prompted()

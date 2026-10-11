@@ -1,0 +1,435 @@
+-- Play state, casting, and keeping everyone in the group on the same line.
+local addonName, ns = ...
+ns.plays = ns.plays or {}
+
+local PREFIX = "Shakespeare"
+local PROMPT_DELAY = 5     -- seconds before other players may prompt
+local CHAT_LOOKAHEAD = 6   -- spoken cues to search when matching /say text
+local CAST_PATTERN = "^I will play the role of (.+)!$"
+
+local db                   -- ShakespeareDB: { playId, pos, cast = { [roleId] = playerName } }
+local lastDelivery = 0     -- GetTime() of the last delivered cue
+local promptedAt = 0       -- GetTime() of the last prompt we sent
+
+local function Print(...)
+	print("|cffd4a017Shakespeare:|r", ...)
+end
+ns.Print = Print
+
+local function Me()
+	return (UnitName("player"))
+end
+ns.Me = Me
+
+local function Short(name)
+	return name and Ambiguate(name, "none")
+end
+
+---------------------------------------------------------------------------
+-- Play data helpers
+---------------------------------------------------------------------------
+
+function ns.Play()
+	return db and ns.plays[db.playId]
+end
+
+function ns.State()
+	return db
+end
+
+-- Identifies a play and the version of its data, so clients whose
+-- generated files differ don't try to follow each other.
+local function PlayKey(play)
+	return play.id .. ":" .. #play.cues
+end
+
+function ns.Role(id)
+	local play = ns.Play()
+	if not play.roleById then
+		play.roleById = {}
+		for _, role in ipairs(play.roles) do
+			play.roleById[role.id] = role
+		end
+	end
+	return play.roleById[id]
+end
+
+function ns.RoleName(id)
+	local role = ns.Role(id)
+	return role and role.name or id
+end
+
+-- Index of the first cue at or after i that someone performs. Directions and
+-- scene headings are skipped; returns #cues + 1 at the end of the play.
+function ns.NextActionable(i)
+	local cues = ns.Play().cues
+	while i <= #cues and not cues[i].r do
+		i = i + 1
+	end
+	return i
+end
+
+function ns.CurrentCue()
+	local play = ns.Play()
+	return play and play.cues[db.pos]
+end
+
+function ns.SceneIndex(pos)
+	local scenes, index = ns.Play().scenes, 1
+	for i, scene in ipairs(scenes) do
+		if scene.start <= pos then index = i end
+	end
+	return index
+end
+
+-- Players cast in any of the cue's roles. Empty means the cue is open.
+function ns.Performers(cue)
+	local players = {}
+	for _, role in ipairs(cue.r or {}) do
+		local player = db.cast[role]
+		if player then players[#players + 1] = player end
+	end
+	return players
+end
+
+-- True if one of the cue's roles is cast to us.
+function ns.IsMine(cue)
+	for _, player in ipairs(ns.Performers(cue)) do
+		if player == Me() then return true end
+	end
+	return false
+end
+
+-- True if we may deliver the cue: it is ours, or nobody has the role.
+function ns.CanDeliver(cue)
+	if not cue or not cue.r then return false end
+	return ns.IsMine(cue) or #ns.Performers(cue) == 0
+end
+
+function ns.KnowsSpell(name)
+	local id
+	if C_Spell and C_Spell.GetSpellInfo then
+		local info = C_Spell.GetSpellInfo(name)
+		id = info and info.spellID
+	elseif GetSpellInfo then
+		id = select(7, GetSpellInfo(name))
+	end
+	if not id then return false end
+	return not IsPlayerSpell or IsPlayerSpell(id)
+end
+
+-- The player to prompt, if the current cue is overdue and belongs to
+-- somebody else.
+function ns.PromptTarget()
+	local cue = ns.CurrentCue()
+	if not cue or ns.CanDeliver(cue) then return end
+	if GetTime() - math.max(lastDelivery, promptedAt) < PROMPT_DELAY then return end
+	return ns.Performers(cue)[1]
+end
+
+function ns.Prompted()
+	promptedAt = GetTime()
+end
+
+---------------------------------------------------------------------------
+-- Addon messages
+---------------------------------------------------------------------------
+
+local function Channel()
+	if IsInRaid() then return "RAID" end
+	if IsInGroup() then return "PARTY" end
+end
+
+local function Send(command, arg, key)
+	local channel, play = Channel(), ns.Play()
+	if not channel or not (key or play) then return end
+	local msg = (key or PlayKey(play)) .. " " .. command
+	if arg then msg = msg .. " " .. arg end
+	C_ChatInfo.SendAddonMessage(PREFIX, msg, channel)
+end
+
+---------------------------------------------------------------------------
+-- State changes. Each local action is applied immediately and broadcast;
+-- the matching receive handlers apply what other players send.
+---------------------------------------------------------------------------
+
+local function SetPos(i)
+	db.pos = ns.NextActionable(math.max(1, i or 1))
+	lastDelivery = GetTime()
+	ns.Refresh()
+end
+
+local function ApplyCue(n)
+	if not n then return end
+	local nextPos = ns.NextActionable(n + 1)
+	if nextPos <= db.pos then return end  -- stale or duplicate
+	db.pos = nextPos
+	lastDelivery = GetTime()
+	ns.Refresh()
+end
+
+local function CastTo(role, player)
+	if not ns.Role(role) then return end
+	db.cast[role] = player
+	ns.Refresh()
+end
+
+local function StartPlay(id)
+	db.playId = id
+	wipe(db.cast)
+	SetPos(1)
+end
+
+-- Called after the deliver button has spoken the line.
+function ns.Deliver(n)
+	ApplyCue(n)
+	Send("CUE", n)
+end
+
+function ns.Goto(i)
+	SetPos(i)
+	Send("GOTO", db.pos)
+end
+
+function ns.Cast(role)
+	CastTo(role, Me())
+	Send("CAST", role)
+	SendChatMessage("I will play the role of " .. ns.RoleName(role) .. "!", "SAY")
+end
+
+function ns.Uncast(role)
+	if db.cast[role] ~= Me() then return end
+	db.cast[role] = nil
+	ns.Refresh()
+	Send("UNCAST", role)
+end
+
+function ns.SelectPlay(id)
+	StartPlay(id)
+	Send("PLAY")
+end
+
+-- Clear the cast and return to the start of the play, for the whole group.
+function ns.Reset()
+	ns.SelectPlay(db.playId)
+	ns.Print("Reset " .. ns.Play().title .. ".")
+end
+
+StaticPopupDialogs.SHAKESPEARE_RESET = {
+	text = "Reset Shakespeare?\n\nThis clears the cast and returns to the start of the play for everyone in your group.",
+	button1 = YES,
+	button2 = NO,
+	OnAccept = function() ns.Reset() end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+	preferredIndex = 3,
+}
+
+function ns.ConfirmReset()
+	StaticPopup_Show("SHAKESPEARE_RESET")
+end
+
+StaticPopupDialogs.SHAKESPEARE_CHOOSE_PLAY = {
+	text = "Perform %s?\n\nThis clears the cast and starts from the top for everyone in your group.",
+	button1 = YES,
+	button2 = NO,
+	OnAccept = function(_, id)
+		ns.SelectPlay(id)
+		ns.Print("Now performing " .. ns.Play().title .. ".")
+	end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+	preferredIndex = 3,
+}
+
+function ns.ConfirmPlay(id)
+	StaticPopup_Show("SHAKESPEARE_CHOOSE_PLAY", ns.plays[id].title, nil, id)
+end
+
+---------------------------------------------------------------------------
+-- Receiving
+---------------------------------------------------------------------------
+
+local function OnAddonMessage(prefix, msg, _, sender)
+	if prefix ~= PREFIX then return end
+	sender = Short(sender)
+	if sender == Me() then return end
+
+	local key, command, arg = msg:match("^(%S+) (%S+) ?(.*)$")
+	if not key then return end
+
+	if command == "SYNC?" then
+		-- The group leader answers with the play, position and cast.
+		if not UnitIsGroupLeader("player") or not ns.Play() then return end
+		Send("POS", db.pos)
+		local byPlayer = {}
+		for role, player in pairs(db.cast) do
+			byPlayer[player] = byPlayer[player] and (byPlayer[player] .. "," .. role) or role
+		end
+		for player, roles in pairs(byPlayer) do
+			Send("HOLD", player .. " " .. roles)
+		end
+		return
+	end
+
+	local id = key:match("^[^:]+")
+	local play = ns.plays[id]
+
+	if command == "PLAY" or command == "POS" then
+		if not play then
+			Print(sender .. " is performing " .. id .. ", which you don't have.")
+			return
+		elseif PlayKey(play) ~= key then
+			Print(sender .. " has a different version of " .. play.title .. ".")
+			return
+		end
+		if command == "PLAY" then
+			StartPlay(id)
+			Print(sender .. " has chosen " .. play.title .. ".")
+		else
+			if db.playId ~= id then
+				db.playId = id
+				wipe(db.cast)
+			end
+			SetPos(tonumber(arg))
+		end
+		return
+	end
+
+	if not ns.Play() or PlayKey(ns.Play()) ~= key then return end
+
+	if command == "CUE" then
+		ApplyCue(tonumber(arg))
+	elseif command == "GOTO" then
+		SetPos(tonumber(arg))
+	elseif command == "CAST" then
+		CastTo(arg, sender)
+	elseif command == "UNCAST" then
+		if db.cast[arg] == sender then CastTo(arg, nil) end
+	elseif command == "HOLD" then
+		local player, roles = arg:match("^(%S+) (.+)$")
+		for role in (roles or ""):gmatch("[^,]+") do
+			CastTo(role, player)
+		end
+	end
+end
+
+local function Normalise(s)
+	return (s:lower():gsub("[^%a]", ""))
+end
+
+-- Fallback for players without the addon: recognise role claims and lines
+-- spoken in /say.
+local function OnSay(text, sender)
+	sender = Short(sender)
+	local play = ns.Play()
+	if sender == Me() or not play then return end
+
+	local name = text:match(CAST_PATTERN)
+	if name then
+		for _, role in ipairs(play.roles) do
+			if role.name:lower() == name:lower() then CastTo(role.id, sender) end
+		end
+		return
+	end
+
+	local said, seen, i = Normalise(text), 0, db.pos
+	while i <= #play.cues and seen < CHAT_LOOKAHEAD do
+		local cue = play.cues[i]
+		if cue.t then
+			seen = seen + 1
+			cue.norm = cue.norm or Normalise(cue.t)
+			if cue.norm == said then
+				ApplyCue(i)
+				return
+			end
+		end
+		i = i + 1
+	end
+end
+
+---------------------------------------------------------------------------
+-- Events
+---------------------------------------------------------------------------
+
+local wasInGroup = false
+local events = CreateFrame("Frame")
+
+events:SetScript("OnEvent", function(_, event, ...)
+	if event == "PLAYER_LOGIN" then
+		ShakespeareDB = ShakespeareDB or {}
+		db = ShakespeareDB
+		db.cast = db.cast or {}
+		if not ns.plays[db.playId] then
+			db.playId = ns.plays.muchado and "muchado" or next(ns.plays)
+			db.pos = 1
+			wipe(db.cast)
+		end
+		db.pos = ns.NextActionable(db.pos or 1)
+		lastDelivery = GetTime()
+		C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+		ns.CreateUI()
+		ns.CreateMinimapButton()
+		wasInGroup = IsInGroup()
+		if wasInGroup then Send("SYNC?", nil, "-") end
+	elseif event == "GROUP_ROSTER_UPDATE" then
+		local inGroup = IsInGroup()
+		if inGroup and not wasInGroup then Send("SYNC?", nil, "-") end
+		wasInGroup = inGroup
+	elseif event == "CHAT_MSG_ADDON" then
+		OnAddonMessage(...)
+	elseif event == "CHAT_MSG_SAY" then
+		OnSay(...)
+	elseif event == "PLAYER_REGEN_ENABLED" then
+		ns.Refresh()
+	end
+end)
+
+for _, event in ipairs({ "PLAYER_LOGIN", "GROUP_ROSTER_UPDATE", "CHAT_MSG_ADDON",
+		"CHAT_MSG_SAY", "PLAYER_REGEN_ENABLED" }) do
+	events:RegisterEvent(event)
+end
+
+---------------------------------------------------------------------------
+-- Slash commands
+---------------------------------------------------------------------------
+
+SLASH_SHAKESPEARE1 = "/shakespeare"
+SLASH_SHAKESPEARE2 = "/bard"
+SlashCmdList.SHAKESPEARE = function(input)
+	local command, rest = input:match("^%s*(%S*)%s*(.-)%s*$")
+	command = command:lower()
+
+	if command == "" then
+		ns.Toggle()
+	elseif command == "plays" then
+		for id, play in pairs(ns.plays) do
+			Print(id .. " - " .. play.title)
+		end
+	elseif command == "play" then
+		if ns.plays[rest] then
+			ns.SelectPlay(rest)
+		else
+			Print("Unknown play '" .. rest .. "'. Try /bard plays.")
+		end
+	elseif command == "scene" then
+		local act, scene = rest:match("^(%d+)%D+(%d+)$")
+		for _, s in ipairs(ns.Play().scenes) do
+			if s.act == tonumber(act) and s.scene == tonumber(scene) then
+				ns.Goto(s.start)
+				return
+			end
+		end
+		Print("Usage: /bard scene <act> <scene>, e.g. /bard scene 2 3")
+	elseif command == "reset" then
+		ns.Reset()
+	else
+		Print("/bard - show or hide the teleprompter")
+		Print("/bard plays - list the plays")
+		Print("/bard play <id> - start a play for the whole group")
+		Print("/bard scene <act> <scene> - jump to a scene")
+		Print("/bard reset - clear the cast and start from the top")
+	end
+end

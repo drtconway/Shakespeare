@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: Shakespeare
+## Notes: Perform the plays of Shakespeare with your group.
+## Version: 0.1
+## SavedVariables: ShakespeareDB
+
+Core.lua
+plays\muchado.lua
+plays\midsummer.lua
+plays\twelfthnight.lua
+UI.lua
+Minimap.lua

@@ -56,6 +56,7 @@ local function ActionText(cue)
 	local parts = {}
 	if cue.s then parts[#parts + 1] = table.concat(cue.s, "/") end
 	if cue.e then parts[#parts + 1] = cue.e end
+	if cue.w then parts[#parts + 1] = "wield " .. cue.w end
 	if #parts == 0 then return "" end
 	local text = table.concat(parts, " or ")
 	if cue.at then text = text .. " at " .. ns.RoleName(cue.at) end
@@ -79,25 +80,47 @@ local function CueText(cue)
 	return DirectionText(cue.d)
 end
 
--- The secure macro that performs the first of a cue's spells the player
--- knows, or else its emote. If the cue is directed at a role, target that
--- role's player for it and then restore the previous target.
+-- The secure macro for a cue's action: equip its weapon, if it has one and
+-- the player owns one, then cast the first of its spells the player knows,
+-- or else do its emote. If the cue is directed at a role, target that role's
+-- player for it and then restore the previous target.
 local function ActionMacro(cue)
+	local lines = {}
+	local wield = cue.w and ns.WieldMacro(cue.w)
+	if wield and wield ~= "" then lines[#lines + 1] = wield end
+
 	local spell = ns.CueSpell(cue)
 	local action = spell and ("/cast " .. spell) or cue.e
-	if not action then return "" end
-	if not cue.at then return action end
-
-	local player = ns.State().cast[cue.at]
-	if player and player ~= ns.Me() then
-		return "/target " .. player .. "\n" .. action .. "\n/targetlasttarget"
+	if action and cue.at then
+		local player = ns.State().cast[cue.at]
+		if player and player ~= ns.Me() then
+			action = "/target " .. player .. "\n" .. action .. "\n/targetlasttarget"
+		else
+			-- Nobody to aim at: don't aim it at whoever happens to be targeted.
+			action = "/cleartarget\n" .. action .. "\n/targetlasttarget"
+		end
 	end
-	-- Nobody to aim at: don't aim it at whoever happens to be targeted.
-	return "/cleartarget\n" .. action .. "\n/targetlasttarget"
+	lines[#lines + 1] = action
+	return table.concat(lines, "\n")
+end
+
+-- Whether performing the cue's action should end with a weapon drawn.
+local function DrawsWeapon(cue)
+	return cue and cue.w and ns.WieldMacro(cue.w) ~= nil
+end
+
+-- Equipping is done by the button's macro; drawing it is done here, after.
+-- GetSheathState: 1 sheathed, 2 melee drawn, 3 ranged drawn.
+local function DrawWeapon()
+	if GetSheathState and ToggleSheath and GetSheathState() ~= 2 then
+		ToggleSheath()
+	end
 end
 
 local function ActionLabel(cue)
-	return ns.CueSpell(cue) or cue.e
+	local label = ns.CueSpell(cue) or cue.e
+	if label then return label end
+	if DrawsWeapon(cue) then return "Wield " .. cue.w end
 end
 
 -- What the deliver button does besides speaking. Stage business (no words)
@@ -120,9 +143,12 @@ local function RefreshSecure()
 
 	deliver:SetAttribute("macrotext", canDeliver and DeliverMacro(cue) or "")
 	deliver:SetEnabled(canDeliver)
+	local deliverActs = canDeliver and (not cue.t or ns.State().autoEmote)
+	deliver.drawsWeapon = deliverActs and DrawsWeapon(cue)
 
 	local emoteCue = ns.EmoteCue()
 	emote:SetAttribute("macrotext", emoteCue and ActionMacro(emoteCue) or "")
+	emote.drawsWeapon = DrawsWeapon(emoteCue)
 	emote:SetEnabled(emoteCue ~= nil)
 	emote:SetText(emoteCue and ActionLabel(emoteCue) or "Emote")
 	if not cue then
@@ -494,6 +520,7 @@ function ns.CreateUI()
 	-- Advance only after the secure macro (emote or spell) for this cue has run.
 	deliver:SetScript("PostClick", function(self, _, down)
 		if ClickIsLive(down) and self.cueIndex then
+			if self.drawsWeapon then DrawWeapon() end
 			ns.Deliver(self.cueIndex)
 		end
 	end)
@@ -514,6 +541,9 @@ function ns.CreateUI()
 		GameTooltip:Show()
 	end)
 	emote:SetScript("OnLeave", GameTooltip_Hide)
+	emote:SetScript("PostClick", function(self, _, down)
+		if ClickIsLive(down) and self.drawsWeapon then DrawWeapon() end
+	end)
 
 	prompt = SecureButton("ShakespearePromptButton", 110)
 

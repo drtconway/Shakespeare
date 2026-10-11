@@ -139,8 +139,49 @@ function ns.Prompted()
 	promptedAt = GetTime()
 end
 
+-- Weapons a cue can ask the player to wield (cue.w). class/subclass are
+-- C_Item.GetItemInfoInstant's classID/subclassID; skill is the proficiency.
+local WEAPONS = {
+	dagger = { class = 2, subclass = 15, skill = 1180 },
+}
+local MAIN_HAND = 16
+
+local function IsWeapon(item, weapon)
+	local _, _, _, _, _, classID, subclassID = C_Item.GetItemInfoInstant(item)
+	return classID == weapon.class and subclassID == weapon.subclass
+end
+
+-- Macro lines that equip a weapon of the given kind into the main hand:
+-- "" if one is already there, nil if the player has none they can use.
+function ns.WieldMacro(kind)
+	local weapon = WEAPONS[kind]
+	if not weapon then return end
+	if IsPlayerSpell and not IsPlayerSpell(weapon.skill) then return end
+
+	local equipped = GetInventoryItemID("player", MAIN_HAND)
+	if equipped and IsWeapon(equipped, weapon) then return "" end
+
+	local level = UnitLevel("player")
+	for bag = 0, NUM_BAG_SLOTS do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if info and IsWeapon(info.itemID, weapon) then
+				local minLevel = select(5, C_Item.GetItemInfo(info.itemID))
+				if not minLevel or minLevel <= level then
+					return "/equipslot " .. MAIN_HAND .. " item:" .. info.itemID
+				end
+			end
+		end
+	end
+end
+
+-- Whether the player can do anything for this cue's action.
+function ns.CanAct(cue)
+	return cue.e or ns.CueSpell(cue) or (cue.w and ns.WieldMacro(cue.w))
+end
+
 local function HasAction(cue)
-	return cue and cue.t and (cue.e or ns.CueSpell(cue))
+	return cue and cue.t and ns.CanAct(cue)
 end
 
 -- The spoken line whose emote or spell the Emote button performs: the line
@@ -411,13 +452,16 @@ events:SetScript("OnEvent", function(_, event, ...)
 		OnAddonMessage(...)
 	elseif event == "CHAT_MSG_SAY" then
 		OnSay(...)
-	elseif event == "PLAYER_REGEN_ENABLED" then
+	elseif event == "PLAYER_REGEN_ENABLED" or event == "BAG_UPDATE_DELAYED"
+			or event == "PLAYER_EQUIPMENT_CHANGED" then
+		-- Combat ended, or the weapons a cue could wield may have changed.
 		ns.Refresh()
 	end
 end)
 
 for _, event in ipairs({ "PLAYER_LOGIN", "GROUP_ROSTER_UPDATE", "CHAT_MSG_ADDON",
-		"CHAT_MSG_SAY", "PLAYER_REGEN_ENABLED" }) do
+		"CHAT_MSG_SAY", "PLAYER_REGEN_ENABLED", "BAG_UPDATE_DELAYED",
+		"PLAYER_EQUIPMENT_CHANGED" }) do
 	events:RegisterEvent(event)
 end
 

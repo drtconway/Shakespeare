@@ -90,11 +90,22 @@ def actions_for(direction):
     return {}
 
 
+WIELDABLE = {"dagger"}  # must match WEAPONS in Core.lua
+
+
 def parse_action(spec, role_ids):
     """'/laugh' -> emote; 'Feign Death /lie' -> spell with emote fallback;
     'Fade, Shadowmeld' -> the first of these spells the player knows;
-    '/kiss @Beatrice' -> emote directed at the player cast as Beatrice."""
+    '/kiss @Beatrice' -> emote directed at the player cast as Beatrice;
+    'wield dagger' -> equip and draw a dagger, if the player has one."""
     spec, _, target = spec.partition("@")
+    wield = None
+    m = re.search(r"\bwield (\w+)", spec)
+    if m:
+        wield = m.group(1).lower()
+        if wield not in WIELDABLE:
+            raise ValueError(f"can't wield {wield!r}; choose from {', '.join(sorted(WIELDABLE))}")
+        spec = spec[:m.start()] + spec[m.end():]
     words = spec.split()
     emotes = [w for w in words if w.startswith("/")]
     spells = " ".join(w for w in words if not w.startswith("/")).split(",")
@@ -104,6 +115,8 @@ def parse_action(spec, role_ids):
         out["e"] = emotes[0]
     if spells:
         out["s"] = spells
+    if wield:
+        out["w"] = wield
     target = target.strip().upper()
     if target:
         if target not in role_ids:
@@ -508,6 +521,7 @@ def to_lua(play):
         "  -- d = stage direction (shown, never spoken), h = scene heading,",
         "  -- e = emote slash command, s = spells: the first one the player knows is",
         "  -- cast (else e is used),",
+        "  -- w = kind of weapon to equip and draw, if the player has one,",
         "  -- at = role the emote or spell is directed at.",
         "  -- A cue with r but no t is stage business the role performs without speaking.",
         "  cues = {",
@@ -524,6 +538,8 @@ def to_lua(play):
             fields.append(f"e = {lua_str(c['e'])}")
         if "s" in c:
             fields.append("s = {" + ", ".join(lua_str(s) for s in c["s"]) + "}")
+        if "w" in c:
+            fields.append(f"w = {lua_str(c['w'])}")
         if "at" in c:
             fields.append(f"at = {lua_str(c['at'])}")
         if "h" in c:

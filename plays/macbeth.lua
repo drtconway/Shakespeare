@@ -80,6 +80,7 @@ ns.plays["macbeth"] = {
   -- d = stage direction (shown, never spoken), h = scene heading,
   -- e = emote slash command, s = spells: the first one the player knows is
   -- cast (else e is used),
+  -- w = kind of weapon to equip and draw, if the player has one,
   -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {
@@ -688,7 +689,7 @@ ns.plays["macbeth"] = {
     { r = {"MACBETH"}, t = "Go bid thy mistress, when my drink is ready," },
     { r = {"MACBETH"}, t = "She strike upon the bell. Get thee to bed." },
     { d = "Exit Servant" },
-    { r = {"MACBETH"}, t = "Is this a dagger which I see before me," },
+    { r = {"MACBETH"}, t = "Is this a dagger which I see before me,", e = "/point" },
     { r = {"MACBETH"}, t = "The handle toward my hand? Come, let me clutch thee:—" },
     { r = {"MACBETH"}, t = "I have thee not, and yet I see thee still." },
     { r = {"MACBETH"}, t = "Art thou not, fatal vision, sensible" },
@@ -696,7 +697,7 @@ ns.plays["macbeth"] = {
     { r = {"MACBETH"}, t = "A dagger of the mind, a false creation," },
     { r = {"MACBETH"}, t = "Proceeding from the heat-oppressed brain?" },
     { r = {"MACBETH"}, t = "I see thee yet, in form as palpable" },
-    { r = {"MACBETH"}, t = "As this which now I draw." },
+    { r = {"MACBETH"}, t = "As this which now I draw.", w = "dagger" },
     { r = {"MACBETH"}, t = "Thou marshall’st me the way that I was going;" },
     { r = {"MACBETH"}, t = "And such an instrument I was to use." },
     { r = {"MACBETH"}, t = "Mine eyes are made the fools o’ the other senses," },

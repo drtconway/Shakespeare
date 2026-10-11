@@ -6,6 +6,11 @@
 # go. A rogue or night elf ghost must step out of stealth themselves before
 # rising again.
 
+# The dagger speech (Act 2, Scene 1): he points at the imaginary dagger, then
+# draws a real one.
+MACBETH    | Is this a dagger which I see before me | /point
+MACBETH    | As this which now I draw        | wield dagger
+
 # Banquo's ghost at the banquet (Act 3, Scene 4)
 BANQUO     | The Ghost of Banquo rises       | Fade
 BANQUO     | Ghost disappears                | Invisibility, Stealth, Shadowmeld

@@ -104,6 +104,9 @@ GHOST     | (enters)                | Fade, Invisibility, Shadowmeld, Stealth
   - **Spells:** comma-separated. The first one the player knows is cast, so the ghost above fades
     if played by a priest and shadowmelds if played by a night elf.
   - **Fallback:** the emote is used if they know none of the spells.
+- **`wield dagger`:** if the player has the Daggers skill and a dagger they can use, the addon
+  equips it in the main hand (unless one is already there) and draws it. Daggers are the only
+  weapon supported so far; others go in `WEAPONS` in `Core.lua` and `WIELDABLE` in the converter.
 - **`@Role`:** aims it at whoever plays that role.
 - **Matching:** lines are matched ignoring punctuation and case. A stage direction can be matched
   too, e.g. `Enter Ghost`; if nobody performs it yet, it becomes a cue that role performs.
@@ -134,6 +137,7 @@ Each play is a list of *cues*. A cue is one click of the Speak button:
     clauses.
 - `d`: a stage direction. It is shown on the teleprompter and never spoken.
 - `e` and `s`: an emote, and a list of spells (the first known is cast).
+- `w`: a kind of weapon to equip and draw, if the player has one.
 - `at`: the role they are aimed at. The addon targets that role's player, performs the action, and
   restores your previous target. If nobody has the role, it isn't aimed at anyone.
 - `h`: marks a scene heading.

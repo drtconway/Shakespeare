@@ -5,7 +5,9 @@ Perform the plays of Shakespeare with your friends in World of Warcraft: Forever
 Shakespeare gives each actor a teleprompter showing the script. When it's your turn, your line is
 highlighted. Click **Speak** and your character says it aloud in /say, so anyone standing nearby
 can watch the performance. Every actor's teleprompter moves on together. Lines can come with
-emotes and spells: bow, kiss, swoon, or Feign Death when someone dies.
+emotes and spells: bow, kiss, swoon, or Feign Death when someone dies. Ghosts shimmer with Fade
+and vanish with Invisibility or Stealth, and characters drink from your bags when the play
+calls for a toast or a poisoned cup.
 
 ## Putting on a play
 

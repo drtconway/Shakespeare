@@ -11,5 +11,6 @@ plays\midsummer.lua
 plays\twelfthnight.lua
 plays\macbeth.lua
 plays\romeo.lua
+plays\hamlet.lua
 UI.lua
 Minimap.lua

@@ -1,0 +1,19 @@
+# Emotes and spells for Hamlet; see plays/muchado.actions for the format.
+# Polonius's, Gertrude's, Laertes's and Hamlet's deaths, and Claudius
+# kneeling to pray, are picked up automatically from the stage directions.
+
+# The Ghost shimmers when it appears and vanishes when it goes. A rogue or
+# night elf ghost must step out of stealth themselves before entering again.
+GHOST    | (enters)                        | Fade
+GHOST    | Exit Ghost                      | Invisibility, Stealth, Shadowmeld
+GHOST    | Exit Ghost                      | Invisibility, Stealth, Shadowmeld
+GHOST    | Exit Ghost                      | Invisibility, Stealth, Shadowmeld
+GHOST    | Ghost beckons Hamlet            | /beckon @Hamlet
+GHOST    | Ghost beckons                   | /beckon @Hamlet
+
+HAMLET   | To be, or not to be             | /ponder
+HAMLET   | Alas, poor Yorick               | /sigh
+
+# The poisoned cup (Act 5, Scene 2).
+GERTRUDE | The Queen carouses to thy fortune | use Bottle of Pinot Noir, Flask of Port, Rhapsody Malt, Thunder Ale, Refreshing Spring Water
+CLAUDIUS | King dies                       | Feign Death /lie

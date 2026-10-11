@@ -54,6 +54,7 @@ resets.
 - *Macbeth* (`macbeth`): Banquo's ghost and the apparitions shimmer and vanish if their actors
   have the spells.
 - *Romeo and Juliet* (`romeo`): the Chorus's prologues are scenes of their own.
+- *Hamlet* (`hamlet`): the Ghost shimmers, beckons and vanishes if its actor has the spells.
 
 The texts come from Project Gutenberg.
 

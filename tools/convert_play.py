@@ -43,6 +43,15 @@ PLAYS = {
             "BOTH MURDERERS": ["FIRST MURDERER", "SECOND MURDERER"],
         },
     },
+    "hamlet": {
+        "title": "Hamlet",
+        "aliases": {
+            "KING": "CLAUDIUS",
+            "QUEEN": "GERTRUDE",
+            "BOTH": ["MARCELLUS", "BARNARDO"],
+        },
+        "directions": ["Trumpets sound. The dumb show enters."],
+    },
     "romeo": {
         "title": "Romeo and Juliet",
         "aliases": {
@@ -197,7 +206,11 @@ PROLOGUE_RE = re.compile(r"^THE PROLOGUE\.?$")
 HEADING_RE = re.compile(
     r"^([A-Z][A-Z’' &]*[A-Z])(?:\.\s*(.*)|\s*\[([^\]]*)\]\.?\s*(.*))$"
 )
-ENTRANCE_RE = re.compile(r"^(Enter|Re-enter)\b")
+# Directions may open with a few short sound cues: "Danish march. A flourish.
+# Enter King, Queen…"
+SOUND_CUES = r"(?:[A-Z][^.!?]{0,30}\.\s+){0,3}"
+ENTRANCE_RE = re.compile(r"^" + SOUND_CUES + r"(Enter|Re-enter)\b")
+DIRECTION_RE = re.compile(r"^" + SOUND_CUES + r"(Enter|Re-enter|Exit|Exeunt)\b")
 # Unbracketed song cues: "Clown sings."  "The Clown’s song."  "Song."
 SONG_RE = re.compile(r"^(?:(?:The )?([A-Z][a-z]+)(?:’s song| sings)|Song)\.?$")
 
@@ -391,7 +404,16 @@ def convert(play_id):
     def open_prologue():
         open_scene(0, "Prologue", f"Act {act}, Prologue" if act else "Prologue")
 
+    # Stage directions the rules below can't recognise, listed per play.
+    extra_directions = set(cfg.get("directions", []))
+
+    # Speech headings are in capitals ("BOTH."); a stray mixed-case one
+    # ("Both.") counts if the same name appears in capitals elsewhere.
+    headings = {clean(l) for l in body if re.match(r"^[A-Z][A-Z .’'&]+\.$", clean(l))}
+
     for block, indented in read_blocks(body):
+        if re.match(r"^[A-Z][a-z]+\.$", block[0]) and block[0].upper() in headings:
+            block[0] = block[0].upper()
         first = block[0]
 
         m = ACT_RE.match(first)
@@ -419,9 +441,10 @@ def convert(play_id):
             open_prologue()
             speaker, in_scene = None, True
 
-        if ENTRANCE_RE.match(first) or (first.startswith("[") and " ".join(block).endswith("]")
-                                        and block[-1].endswith("]")
-                                        and "]" not in " ".join(block)[:-1]):
+        if (DIRECTION_RE.match(first) or " ".join(block) in extra_directions
+                or (first.startswith("[") and " ".join(block).endswith("]")
+                    and block[-1].endswith("]")
+                    and "]" not in " ".join(block)[:-1])):
             d = " ".join(block).strip("[] ").rstrip(".")
             cues.append({"d": d, "_speaker": speaker})
             continue

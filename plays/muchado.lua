@@ -54,6 +54,8 @@ ns.plays["muchado"] = {
   -- d = stage direction (shown, never spoken), h = scene heading,
   -- e = emote slash command, s = spells: the first one the player knows is
   -- cast (else e is used),
+  -- w = kind of weapon to equip and draw, if the player has one,
+  -- u = items: the first one the player has is used,
   -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {

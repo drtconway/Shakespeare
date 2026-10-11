@@ -409,8 +409,14 @@ local function OnSay(text, sender)
 		local cue = play.cues[i]
 		if cue.t then
 			seen = seen + 1
-			cue.norm = cue.norm or Normalise(cue.t)
-			if cue.norm == said then
+			if not cue.norms then
+				-- The line as anyone might say it: plain, or in a dialect.
+				cue.norms = { [Normalise(cue.t)] = true }
+				for id in pairs(ns.DIALECTS) do
+					cue.norms[Normalise(ns.Accent(cue.t, id))] = true
+				end
+			end
+			if cue.norms[said] then
 				ApplyCue(i)
 				return
 			end

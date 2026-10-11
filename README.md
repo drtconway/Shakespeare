@@ -32,6 +32,7 @@ leader.
 | **Speak** / **Perform** | Deliver your line, or perform your stage business (e.g. *Hero swoons*). Bindable to a key under Key Bindings → AddOns → Shakespeare. |
 | **Emote** | Do the emote or spell for your line: the one you've just spoken (until the next line is delivered), or the one you're about to speak. Aimed emotes target the other actor automatically. |
 | **Auto emotes** | When ticked, **Speak** does the emote too. |
+| **Troll speak** / **Dwarf speak** | Shown to trolls and dwarves. When ticked, your lines are spoken in your race's dialect ("Is dis a dagger…", "Aye, lad"). Your lines on the teleprompter show how they'll sound. |
 | **Prompt** | Appears when an actor is five seconds late. Pokes, coughs or sighs at them. |
 | `<<` `>>` | Go to the start or end of the scene. Click again for the previous or next scene. |
 | `<` `>` | Step back or forward one line, to recover from a mistake. |

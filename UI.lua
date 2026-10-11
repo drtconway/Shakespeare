@@ -73,7 +73,9 @@ local function CueText(cue)
 	elseif cue.t then
 		local speaker = SpeakerText(cue)
 		if cue.d then speaker = speaker .. " " .. DirectionText(cue.d) end
-		return speaker .. "\n" .. cue.t .. ActionText(cue)
+		-- Lines you may deliver are shown as you will speak them.
+		local text = ns.CanDeliver(cue) and ns.Speech(cue.t) or cue.t
+		return speaker .. "\n" .. text .. ActionText(cue)
 	elseif cue.r then
 		return SpeakerText(cue) .. "\n" .. DirectionText(cue.d) .. ActionText(cue)
 	end
@@ -506,6 +508,29 @@ function ns.CreateUI()
 	autoLabel:SetPoint("LEFT", autoEmote, "RIGHT", 0, 1)
 	autoLabel:SetText("Auto emotes")
 
+	-- Only players whose race has a dialect get the option to speak in it.
+	local dialect = ns.DIALECTS[select(2, UnitRace("player"))]
+	local useDialect
+	if dialect then
+		useDialect = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+		useDialect:SetSize(24, 24)
+		useDialect:SetChecked(ns.State().useDialect)
+		useDialect:SetScript("OnClick", function(self)
+			ns.State().useDialect = self:GetChecked() and true or false
+			ns.Refresh()
+		end)
+		useDialect:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:AddLine(dialect.label)
+			GameTooltip:AddLine("Speak your lines in your race's dialect. Your lines on the teleprompter show how they will sound.", 1, 1, 1, true)
+			GameTooltip:Show()
+		end)
+		useDialect:SetScript("OnLeave", GameTooltip_Hide)
+		local dialectLabel = useDialect:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		dialectLabel:SetPoint("LEFT", useDialect, "RIGHT", 0, 1)
+		dialectLabel:SetText(dialect.label)
+	end
+
 	deliver = SecureButton("ShakespeareDeliverButton", 120)
 	deliver:SetScript("PreClick", function(self, _, down)
 		self.cueIndex = nil
@@ -514,7 +539,7 @@ function ns.CreateUI()
 		if not ns.CanDeliver(cue) then return end
 		self.cueIndex = ns.State().pos
 		if cue.t then
-			SendChatMessage((cue.t:gsub("\n", " ")), "SAY")
+			SendChatMessage(ns.Speech((cue.t:gsub("\n", " "))), "SAY")
 		end
 	end)
 	-- Advance only after the secure macro (emote or spell) for this cue has run.
@@ -548,11 +573,12 @@ function ns.CreateUI()
 	prompt = SecureButton("ShakespearePromptButton", 110)
 
 	-- Right-hand group, right to left: Emote, Speak, Prompt; the auto emotes
-	-- checkbox sits above Emote.
+	-- checkbox sits above Emote and the dialect checkbox above Speak.
 	emote:SetPoint("BOTTOMRIGHT", -18, 17)
 	deliver:SetPoint("RIGHT", emote, "LEFT", -6, 0)
 	prompt:SetPoint("RIGHT", deliver, "LEFT", -6, 0)
 	autoEmote:SetPoint("BOTTOMLEFT", emote, "TOPLEFT", 0, 2)
+	if useDialect then useDialect:SetPoint("BOTTOMLEFT", deliver, "TOPLEFT", 0, 2) end
 	prompt:SetScript("PostClick", function(_, _, down)
 		if ClickIsLive(down) then
 			ns.Prompted()

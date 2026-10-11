@@ -5,6 +5,7 @@
 ## SavedVariables: ShakespeareDB
 
 Core.lua
+Dialects.lua
 plays\muchado.lua
 plays\midsummer.lua
 plays\twelfthnight.lua

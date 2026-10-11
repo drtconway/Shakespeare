@@ -1,0 +1,5 @@
+# Emotes and spells for Twelfth Night; see plays/muchado.actions for the format.
+
+# Sir Toby's carousing (Act 2, Scene 3), in Malvolio's face. He drinks the
+# first of these the player carries; wine and ale make you tipsy.
+SIR TOBY BELCH | A stoup of wine, Maria | use Bottle of Pinot Noir, Flask of Port, Rhapsody Malt, Thunder Ale, Skin of Dwarven Stout, Flagon of Mead, Refreshing Spring Water

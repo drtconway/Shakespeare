@@ -32,6 +32,7 @@ leader.
 | **Speak** / **Perform** | Deliver your line, or perform your stage business (e.g. *Hero swoons*). Bindable to a key under Key Bindings → AddOns → Shakespeare. |
 | **Emote** | Do the emote or spell for your line: the one you've just spoken (until the next line is delivered), or the one you're about to speak. Aimed emotes target the other actor automatically. |
 | **Auto emotes** | When ticked, **Speak** does the emote too. |
+| **Use items** | Ticked by default. Lets a few drinking scenes use a drink from your bags: Juliet's potion and Romeo's poison (Refreshing Spring Water), Macbeth's toast and Sir Toby's carousing (wine or ale if you have some, else water). Items are used up, so untick it to keep yours. |
 | **Troll speak** / **Dwarf speak** | Shown to trolls and dwarves. When ticked, your lines are spoken in your race's dialect ("Is dis a dagger…", "Aye, lad"). Your lines on the teleprompter show how they'll sound. |
 | **Prompt** | Lights up when an actor is five seconds late. Pokes, coughs or sighs at them (hover to see who). |
 | `<<` `>>` | Go to the start or end of the scene. Click again for the previous or next scene. |
@@ -108,6 +109,8 @@ GHOST     | (enters)                | Fade, Invisibility, Shadowmeld, Stealth
 - **`wield dagger`:** if the player has the Daggers skill and a dagger they can use, the addon
   equips it in the main hand (unless one is already there) and draws it. Daggers are the only
   weapon supported so far; others go in `WEAPONS` in `Core.lua` and `WIELDABLE` in the converter.
+- **`use <items>`:** uses the first of these items (comma-separated) the player has in their bags,
+  e.g. `use Flask of Port, Refreshing Spring Water`. Players can turn this off with **Use items**.
 - **`@Role`:** aims it at whoever plays that role.
 - **Matching:** lines are matched ignoring punctuation and case. A stage direction can be matched
   too, e.g. `Enter Ghost`; if nobody performs it yet, it becomes a cue that role performs.
@@ -139,6 +142,7 @@ Each play is a list of *cues*. A cue is one click of the Speak button:
 - `d`: a stage direction. It is shown on the teleprompter and never spoken.
 - `e` and `s`: an emote, and a list of spells (the first known is cast).
 - `w`: a kind of weapon to equip and draw, if the player has one.
+- `u`: items to use; the first the player has is used.
 - `at`: the role they are aimed at. The addon targets that role's player, performs the action, and
   restores your previous target. If nobody has the role, it isn't aimed at anyone.
 - `h`: marks a scene heading.

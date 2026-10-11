@@ -11,7 +11,9 @@
 MACBETH    | Is this a dagger which I see before me | /point
 MACBETH    | As this which now I draw        | wield dagger
 
-# Banquo's ghost at the banquet (Act 3, Scene 4)
+# Banquo's ghost at the banquet (Act 3, Scene 4). Macbeth's toast drinks
+# the first of these the player carries; wine and ale make you tipsy.
+MACBETH    | I drink to the general joy      | use Bottle of Pinot Noir, Flask of Port, Rhapsody Malt, Thunder Ale, Refreshing Spring Water
 BANQUO     | The Ghost of Banquo rises       | Fade
 BANQUO     | Ghost disappears                | Invisibility, Stealth, Shadowmeld
 BANQUO     | Ghost rises again               | Fade

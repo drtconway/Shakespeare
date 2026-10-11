@@ -97,8 +97,15 @@ def parse_action(spec, role_ids):
     """'/laugh' -> emote; 'Feign Death /lie' -> spell with emote fallback;
     'Fade, Shadowmeld' -> the first of these spells the player knows;
     '/kiss @Beatrice' -> emote directed at the player cast as Beatrice;
-    'wield dagger' -> equip and draw a dagger, if the player has one."""
+    'wield dagger' -> equip and draw a dagger, if the player has one;
+    'use Flask of Port, Refreshing Spring Water' -> use the first of these
+    items the player has."""
     spec, _, target = spec.partition("@")
+    items = []
+    m = re.search(r"\buse ([^/]+)", spec)
+    if m:
+        items = [i.strip() for i in m.group(1).split(",") if i.strip()]
+        spec = spec[:m.start()] + spec[m.end():]
     wield = None
     m = re.search(r"\bwield (\w+)", spec)
     if m:
@@ -117,6 +124,8 @@ def parse_action(spec, role_ids):
         out["s"] = spells
     if wield:
         out["w"] = wield
+    if items:
+        out["u"] = items
     target = target.strip().upper()
     if target:
         if target not in role_ids:
@@ -522,6 +531,7 @@ def to_lua(play):
         "  -- e = emote slash command, s = spells: the first one the player knows is",
         "  -- cast (else e is used),",
         "  -- w = kind of weapon to equip and draw, if the player has one,",
+        "  -- u = items: the first one the player has is used,",
         "  -- at = role the emote or spell is directed at.",
         "  -- A cue with r but no t is stage business the role performs without speaking.",
         "  cues = {",
@@ -540,6 +550,8 @@ def to_lua(play):
             fields.append("s = {" + ", ".join(lua_str(s) for s in c["s"]) + "}")
         if "w" in c:
             fields.append(f"w = {lua_str(c['w'])}")
+        if "u" in c:
+            fields.append("u = {" + ", ".join(lua_str(i) for i in c["u"]) + "}")
         if "at" in c:
             fields.append(f"at = {lua_str(c['at'])}")
         if "h" in c:

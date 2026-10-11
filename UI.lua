@@ -57,6 +57,10 @@ local function ActionText(cue)
 	if cue.s then parts[#parts + 1] = table.concat(cue.s, "/") end
 	if cue.e then parts[#parts + 1] = cue.e end
 	if cue.w then parts[#parts + 1] = "wield " .. cue.w end
+	if cue.u then
+		-- The first choice stands for the rest, e.g. "use Bottle of Pinot Noir…".
+		parts[#parts + 1] = "use " .. cue.u[1] .. (#cue.u > 1 and "…" or "")
+	end
 	if #parts == 0 then return "" end
 	local text = table.concat(parts, " or ")
 	if cue.at then text = text .. " at " .. ns.RoleName(cue.at) end
@@ -82,14 +86,16 @@ local function CueText(cue)
 	return DirectionText(cue.d)
 end
 
--- The secure macro for a cue's action: equip its weapon, if it has one and
--- the player owns one, then cast the first of its spells the player knows,
+-- The secure macro for a cue's action: equip its weapon and use its item,
+-- if the player has them, then cast the first of its spells the player knows,
 -- or else do its emote. If the cue is directed at a role, target that role's
 -- player for it and then restore the previous target.
 local function ActionMacro(cue)
 	local lines = {}
 	local wield = cue.w and ns.WieldMacro(cue.w)
 	if wield and wield ~= "" then lines[#lines + 1] = wield end
+	local item = ns.CueItem(cue)
+	if item then lines[#lines + 1] = "/use " .. item end
 
 	local spell = ns.CueSpell(cue)
 	local action = spell and ("/cast " .. spell) or cue.e
@@ -123,6 +129,7 @@ local function ActionLabel(cue)
 	local label = ns.CueSpell(cue) or cue.e
 	if label then return label end
 	if DrawsWeapon(cue) then return "Wield " .. cue.w end
+	if ns.CueItem(cue) then return "Use item" end  -- name is in the tooltip
 end
 
 -- What the deliver button does besides speaking. Stage business (no words)
@@ -167,8 +174,8 @@ local function RefreshSecure()
 	if target ~= prompt.target then
 		prompt.target = target
 		if target then
-			local emote = PROMPT_EMOTES[math.random(#PROMPT_EMOTES)]
-			prompt:SetAttribute("macrotext", "/target " .. target .. "\n" .. emote)
+			local nudge = PROMPT_EMOTES[math.random(#PROMPT_EMOTES)]
+			prompt:SetAttribute("macrotext", "/target " .. target .. "\n" .. nudge)
 		else
 			prompt:SetAttribute("macrotext", "")
 		end
@@ -271,6 +278,31 @@ local function Button(label, width, tooltip, onClick)
 	end)
 	b:SetScript("OnLeave", GameTooltip_Hide)
 	return b
+end
+
+-- A labelled checkbox for a saved setting (ns.State()[key]); an unset
+-- setting reads as default.
+local function Checkbox(label, tooltip, key, default)
+	local box = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+	box:SetSize(24, 24)
+	local value = ns.State()[key]
+	if value == nil then value = default end
+	box:SetChecked(value)
+	box:SetScript("OnClick", function(self)
+		ns.State()[key] = self:GetChecked() and true or false
+		ns.Refresh()
+	end)
+	box:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine(label)
+		GameTooltip:AddLine(tooltip, 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	box:SetScript("OnLeave", GameTooltip_Hide)
+	local text = box:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	text:SetPoint("LEFT", box, "RIGHT", 0, 1)
+	text:SetText(label)
+	return box
 end
 
 -- Scene navigation. Moves are broadcast to the whole group.
@@ -491,46 +523,19 @@ function ns.CreateUI()
 		function() ns.ConfirmReset() end)
 	resetButton:SetPoint("LEFT", castButton, "RIGHT", 2, 0)
 
-	local autoEmote = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-	autoEmote:SetSize(24, 24)
-	autoEmote:SetChecked(ns.State().autoEmote)
-	autoEmote:SetScript("OnClick", function(self)
-		ns.State().autoEmote = self:GetChecked() and true or false
-		RefreshSecure()
-	end)
-	autoEmote:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine("Auto emotes")
-		GameTooltip:AddLine("Speak also does the line's emote or spell. When off, use the Emote button.", 1, 1, 1, true)
-		GameTooltip:Show()
-	end)
-	autoEmote:SetScript("OnLeave", GameTooltip_Hide)
-	local autoLabel = autoEmote:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	autoLabel:SetPoint("LEFT", autoEmote, "RIGHT", 0, 1)
-	autoLabel:SetText("Auto emotes")
+	local autoEmote = Checkbox("Auto emotes",
+		"Speak also does the line's emote or spell. When off, use the Emote button.",
+		"autoEmote", false)
+
+	local useItems = Checkbox("Use items",
+		"Let lines use items from your bags, e.g. drinking Refreshing Spring Water. Items are used up.",
+		"useItems", true)
 
 	-- Only players whose race has a dialect get the option to speak in it.
 	local dialect = ns.DIALECTS[select(2, UnitRace("player"))]
-	local useDialect
-	if dialect then
-		useDialect = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-		useDialect:SetSize(24, 24)
-		useDialect:SetChecked(ns.State().useDialect)
-		useDialect:SetScript("OnClick", function(self)
-			ns.State().useDialect = self:GetChecked() and true or false
-			ns.Refresh()
-		end)
-		useDialect:SetScript("OnEnter", function(self)
-			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:AddLine(dialect.label)
-			GameTooltip:AddLine("Speak your lines in your race's dialect. Your lines on the teleprompter show how they will sound.", 1, 1, 1, true)
-			GameTooltip:Show()
-		end)
-		useDialect:SetScript("OnLeave", GameTooltip_Hide)
-		local dialectLabel = useDialect:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		dialectLabel:SetPoint("LEFT", useDialect, "RIGHT", 0, 1)
-		dialectLabel:SetText(dialect.label)
-	end
+	local useDialect = dialect and Checkbox(dialect.label,
+		"Speak your lines in your race's dialect. Your lines on the teleprompter show how they will sound.",
+		"useDialect", false)
 
 	deliver = SecureButton("ShakespeareDeliverButton", 120)
 	deliver:SetScript("PreClick", function(self, _, down)
@@ -559,6 +564,9 @@ function ns.CreateUI()
 		if not cue then return end
 		GameTooltip:SetOwner(self, "ANCHOR_TOP")
 		GameTooltip:AddLine(ActionLabel(cue))
+		if ns.CueItem(cue) then
+			GameTooltip:AddLine("Use " .. ns.CueItem(cue), 1, 1, 1)
+		end
 		if cue.at then
 			local player = ns.State().cast[cue.at]
 			GameTooltip:AddLine("At " .. ns.RoleName(cue.at) .. (player and (" (" .. player .. ")") or " (not cast)"),
@@ -574,12 +582,14 @@ function ns.CreateUI()
 	prompt = SecureButton("ShakespearePromptButton", 110)
 
 	-- Right-hand group, right to left: Emote, Speak, Prompt; the auto emotes
-	-- checkbox sits above Emote and the dialect checkbox above Speak.
+	-- checkbox sits above Emote, the dialect checkbox above Speak, and the
+	-- use items checkbox above Prompt.
 	emote:SetPoint("BOTTOMRIGHT", -18, 17)
 	deliver:SetPoint("RIGHT", emote, "LEFT", -6, 0)
 	prompt:SetPoint("RIGHT", deliver, "LEFT", -6, 0)
 	autoEmote:SetPoint("BOTTOMLEFT", emote, "TOPLEFT", 0, 2)
 	if useDialect then useDialect:SetPoint("BOTTOMLEFT", deliver, "TOPLEFT", 0, 2) end
+	useItems:SetPoint("BOTTOMLEFT", prompt, "TOPLEFT", 0, 2)
 	prompt:SetScript("PostClick", function(_, _, down)
 		if ClickIsLive(down) then
 			ns.Prompted()

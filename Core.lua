@@ -193,9 +193,20 @@ function ns.WieldMacro(kind)
 	end
 end
 
+-- The first of a cue's items (cue.u, e.g. drinks) the player has, unless
+-- they have turned off "Use items". Items are consumed, so this is opt-out.
+function ns.CueItem(cue)
+	if not cue.u or db.useItems == false then return end
+	local getCount = C_Item and C_Item.GetItemCount or GetItemCount
+	for _, item in ipairs(cue.u) do
+		local count = getCount(item)
+		if count and count > 0 then return item end
+	end
+end
+
 -- Whether the player can do anything for this cue's action.
 function ns.CanAct(cue)
-	return cue.e or ns.CueSpell(cue) or (cue.w and ns.WieldMacro(cue.w))
+	return cue.e or ns.CueSpell(cue) or (cue.w and ns.WieldMacro(cue.w)) or ns.CueItem(cue)
 end
 
 local function HasAction(cue)

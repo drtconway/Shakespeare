@@ -73,6 +73,8 @@ ns.plays["romeo"] = {
   -- d = stage direction (shown, never spoken), h = scene heading,
   -- e = emote slash command, s = spells: the first one the player knows is
   -- cast (else e is used),
+  -- w = kind of weapon to equip and draw, if the player has one,
+  -- u = items: the first one the player has is used,
   -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {
@@ -2589,7 +2591,7 @@ ns.plays["romeo"] = {
     { r = {"JULIET"}, t = "O look, methinks I see my cousin’s ghost" },
     { r = {"JULIET"}, t = "Seeking out Romeo that did spit his body" },
     { r = {"JULIET"}, t = "Upon a rapier’s point. Stay, Tybalt, stay!" },
-    { r = {"JULIET"}, t = "Romeo, Romeo, Romeo, here’s drink! I drink to thee." },
+    { r = {"JULIET"}, t = "Romeo, Romeo, Romeo, here’s drink! I drink to thee.", u = {"Refreshing Spring Water"} },
     { r = {"JULIET"}, d = "Throws herself on the bed", e = "/sleep", s = {"Feign Death"} },
     { d = "Act 4, Scene 4. Hall in Capulet’s House.", h = true },
     { d = "Enter Lady Capulet and Nurse" },
@@ -3045,7 +3047,7 @@ ns.plays["romeo"] = {
     { r = {"ROMEO"}, t = "Thou desperate pilot, now at once run on" },
     { r = {"ROMEO"}, t = "The dashing rocks thy sea-sick weary bark." },
     { r = {"ROMEO"}, t = "Here’s to my love!" },
-    { r = {"ROMEO"}, t = "O true apothecary!", d = "Drinks" },
+    { r = {"ROMEO"}, t = "O true apothecary!", d = "Drinks", u = {"Refreshing Spring Water"} },
     { r = {"ROMEO"}, t = "Thy drugs are quick. Thus with a kiss I die." },
     { r = {"ROMEO"}, d = "Dies", e = "/lie", s = {"Feign Death"} },
     { d = "Enter, at the other end of the Churchyard, Friar Lawrence, with a lantern, crow, and spade" },

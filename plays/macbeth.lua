@@ -81,6 +81,7 @@ ns.plays["macbeth"] = {
   -- e = emote slash command, s = spells: the first one the player knows is
   -- cast (else e is used),
   -- w = kind of weapon to equip and draw, if the player has one,
+  -- u = items: the first one the player has is used,
   -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {
@@ -1421,7 +1422,7 @@ ns.plays["macbeth"] = {
     { r = {"MACBETH"}, t = "I have a strange infirmity, which is nothing" },
     { r = {"MACBETH"}, t = "To those that know me. Come, love and health to all;" },
     { r = {"MACBETH"}, t = "Then I’ll sit down.—Give me some wine, fill full.—" },
-    { r = {"MACBETH"}, t = "I drink to the general joy o’ th’ whole table," },
+    { r = {"MACBETH"}, t = "I drink to the general joy o’ th’ whole table,", u = {"Bottle of Pinot Noir", "Flask of Port", "Rhapsody Malt", "Thunder Ale", "Refreshing Spring Water"} },
     { r = {"MACBETH"}, t = "And to our dear friend Banquo, whom we miss:" },
     { r = {"MACBETH"}, t = "Would he were here." },
     { r = {"BANQUO"}, d = "Ghost rises again", s = {"Fade"} },

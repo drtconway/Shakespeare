@@ -50,6 +50,8 @@ ns.plays["twelfthnight"] = {
   -- d = stage direction (shown, never spoken), h = scene heading,
   -- e = emote slash command, s = spells: the first one the player knows is
   -- cast (else e is used),
+  -- w = kind of weapon to equip and draw, if the player has one,
+  -- u = items: the first one the player has is used,
   -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {
@@ -731,7 +733,7 @@ ns.plays["twelfthnight"] = {
     { r = {"CLOWN"}, t = "Yes, by Saint Anne, and ginger shall be hot i’ the mouth too." },
     { r = {"SIR TOBY BELCH"}, t = "Th’art i’ the right." },
     { r = {"SIR TOBY BELCH"}, t = "Go, sir, rub your chain with crumbs." },
-    { r = {"SIR TOBY BELCH"}, t = "A stoup of wine, Maria!" },
+    { r = {"SIR TOBY BELCH"}, t = "A stoup of wine, Maria!", u = {"Bottle of Pinot Noir", "Flask of Port", "Rhapsody Malt", "Thunder Ale", "Skin of Dwarven Stout", "Flagon of Mead", "Refreshing Spring Water"} },
     { r = {"MALVOLIO"}, t = "Mistress Mary, if you prized my lady’s favour at anything more than contempt, you would not give means for this uncivil rule; she shall know of it, by this hand." },
     { d = "Exit" },
     { r = {"MARIA"}, t = "Go shake your ears." },

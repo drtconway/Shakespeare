@@ -54,7 +54,7 @@ end
 
 local function ActionText(cue)
 	local parts = {}
-	if cue.s then parts[#parts + 1] = cue.s end
+	if cue.s then parts[#parts + 1] = table.concat(cue.s, "/") end
 	if cue.e then parts[#parts + 1] = cue.e end
 	if #parts == 0 then return "" end
 	local text = table.concat(parts, " or ")
@@ -79,16 +79,12 @@ local function CueText(cue)
 	return DirectionText(cue.d)
 end
 
--- The secure macro that performs a cue's spell, if known, or else its emote.
--- If the cue is directed at a role, target that role's player for it and
--- then restore the previous target.
+-- The secure macro that performs the first of a cue's spells the player
+-- knows, or else its emote. If the cue is directed at a role, target that
+-- role's player for it and then restore the previous target.
 local function ActionMacro(cue)
-	local action
-	if cue.s and ns.KnowsSpell(cue.s) then
-		action = "/cast " .. cue.s
-	else
-		action = cue.e
-	end
+	local spell = ns.CueSpell(cue)
+	local action = spell and ("/cast " .. spell) or cue.e
 	if not action then return "" end
 	if not cue.at then return action end
 
@@ -101,8 +97,7 @@ local function ActionMacro(cue)
 end
 
 local function ActionLabel(cue)
-	if cue.s and ns.KnowsSpell(cue.s) then return cue.s end
-	return cue.e
+	return ns.CueSpell(cue) or cue.e
 end
 
 -- What the deliver button does besides speaking. Stage business (no words)

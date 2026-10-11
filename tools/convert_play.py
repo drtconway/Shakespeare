@@ -53,7 +53,7 @@ ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5}
 # Stage directions that imply an emote (e) and/or spell (s). The spell is
 # used if the player knows it, otherwise the emote is the fallback.
 ACTION_RULES = [
-    (r"\bdies\b", {"e": "/lie", "s": "Feign Death"}),
+    (r"\bdies\b", {"e": "/lie", "s": ["Feign Death"]}),
     (r"\bswoons\b", {"e": "/lie"}),
     (r"\bsleeps?\b|\blies down\b", {"e": "/sleep"}),
     (r"\bwaking\b", {"e": "/stand"}),
@@ -73,16 +73,18 @@ def actions_for(direction):
 
 def parse_action(spec, role_ids):
     """'/laugh' -> emote; 'Feign Death /lie' -> spell with emote fallback;
+    'Fade, Shadowmeld' -> the first of these spells the player knows;
     '/kiss @Beatrice' -> emote directed at the player cast as Beatrice."""
     spec, _, target = spec.partition("@")
     words = spec.split()
     emotes = [w for w in words if w.startswith("/")]
-    spell = " ".join(w for w in words if not w.startswith("/"))
+    spells = " ".join(w for w in words if not w.startswith("/")).split(",")
+    spells = [s.strip() for s in spells if s.strip()]
     out = {}
     if emotes:
         out["e"] = emotes[0]
-    if spell:
-        out["s"] = spell
+    if spells:
+        out["s"] = spells
     target = target.strip().upper()
     if target:
         if target not in role_ids:
@@ -99,8 +101,10 @@ def apply_overlay(play_id, cues):
     """Apply hand-written actions from plays/<id>.actions.
 
     Each non-comment line is:  ROLE | first words of the line | action
-    The "line" may also be the start of a stage direction the role performs,
-    such as "Kisses her".
+
+    The "line" may also be the start of a stage direction, such as "Kisses
+    her" or "Enter Ghost". A direction nobody performs yet becomes a cue the
+    role performs. "(enters)" matches every entrance that names the role.
     """
     path = Path(ROOT, "plays", f"{play_id}.actions")
     if not path.exists():
@@ -114,14 +118,31 @@ def apply_overlay(play_id, cues):
             role, prefix, spec = (p.strip() for p in line.split("|"))
         except ValueError:
             sys.exit(f"{path.name}:{n}: expected ROLE | text | action")
-        cue = next((c for c in cues if role in c.get("r", [])
-                    and normalise(c.get("t") or c.get("d", "")).startswith(normalise(prefix))), None)
-        if cue is None:
-            sys.exit(f"{path.name}:{n}: no {role} line starting {prefix!r}")
+        if role not in role_ids:
+            sys.exit(f"{path.name}:{n}: unknown role {role!r}")
+
+        if prefix.lower() == "(enters)":
+            name = re.compile(r"\b" + re.escape(title_case(role)) + r"\b")
+            matches = [c for c in cues if "r" not in c and ENTRANCE_RE.match(c.get("d", ""))
+                       and name.search(c["d"])]
+            if not matches:
+                sys.exit(f"{path.name}:{n}: no entrances naming {title_case(role)!r}")
+        else:
+            cue = next((c for c in cues
+                        if (role in c.get("r", []) or ("r" not in c and not c.get("h")))
+                        and normalise(c.get("t") or c.get("d", "")).startswith(normalise(prefix))),
+                       None)
+            if cue is None:
+                sys.exit(f"{path.name}:{n}: no {role} line starting {prefix!r}")
+            matches = [cue]
+
         try:
-            cue.update(parse_action(spec, role_ids))
+            action = parse_action(spec, role_ids)
         except ValueError as err:
             sys.exit(f"{path.name}:{n}: {err}")
+        for cue in matches:
+            cue.setdefault("r", [role])
+            cue.update(action)
 
 ACT_RE = re.compile(r"^ACT ([IVX]+)\.?$")
 SCENE_RE = re.compile(r"^(?:SCENE|Scene) ([IVX]+)\.\s*(.*)$")
@@ -424,7 +445,8 @@ def to_lua(play):
         "  },",
         "  -- r = roles who may speak it, t = text (<= 255 bytes, one chat message),",
         "  -- d = stage direction (shown, never spoken), h = scene heading,",
-        "  -- e = emote slash command, s = spell to cast if known (else e is used),",
+        "  -- e = emote slash command, s = spells: the first one the player knows is",
+        "  -- cast (else e is used),",
         "  -- at = role the emote or spell is directed at.",
         "  -- A cue with r but no t is stage business the role performs without speaking.",
         "  cues = {",
@@ -440,7 +462,7 @@ def to_lua(play):
         if "e" in c:
             fields.append(f"e = {lua_str(c['e'])}")
         if "s" in c:
-            fields.append(f"s = {lua_str(c['s'])}")
+            fields.append("s = {" + ", ".join(lua_str(s) for s in c["s"]) + "}")
         if "at" in c:
             fields.append(f"at = {lua_str(c['at'])}")
         if "h" in c:

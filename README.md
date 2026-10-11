@@ -94,13 +94,17 @@ line:
 ROLE      | first words of the line | action
 BEATRICE  | I wonder that you will  | /sigh @Benedick
 THISBE    | Dies                    | Feign Death /lie
+GHOST     | (enters)                | Fade, Invisibility, Shadowmeld, Stealth
 ```
 
-- **Action:** an emote, a spell (cast if the player knows it), or both, in which case the emote is
-  the fallback.
+- **Action:** an emote, one or more spells, or both.
+  - **Spells:** comma-separated. The first one the player knows is cast, so the ghost above fades
+    if played by a priest and shadowmelds if played by a night elf.
+  - **Fallback:** the emote is used if they know none of the spells.
 - **`@Role`:** aims it at whoever plays that role.
-- **Matching:** lines are matched ignoring punctuation and case. Wordless cues are matched by their
-  stage direction.
+- **Matching:** lines are matched ignoring punctuation and case. A stage direction can be matched
+  too, e.g. `Enter Ghost`; if nobody performs it yet, it becomes a cue that role performs.
+- **`(enters)`:** matches every entrance that names the role. Use it to make a ghost appear.
 - **Errors:** the converter stops with an error if a line or role doesn't match.
 
 ### Play data
@@ -112,7 +116,7 @@ Each play is a list of *cues*. A cue is one click of the Speak button:
 { r = {"CLAUDIO"}, t = "Bait the hook well: this fish will bite.", d = "Aside" }
 { r = {"BORACHIO", "CONRADE"}, t = "Yea, sir, we hope." }      -- "BOTH."; either may speak it
 { r = {"HERO"}, d = "Hero swoons", e = "/lie" }                -- stage business, no speech
-{ r = {"THISBE"}, d = "Dies", e = "/lie", s = "Feign Death" }  -- spell if known, else emote
+{ r = {"THISBE"}, d = "Dies", e = "/lie", s = {"Feign Death"} } -- spell if known, else emote
 { d = "Enter Don John and Conrade" }                           -- direction, shown only
 { d = "Act 1, Scene 2. A room in Leonato's house.", h = true } -- scene heading
 ```
@@ -126,7 +130,7 @@ Each play is a list of *cues*. A cue is one click of the Speak button:
   - Nothing exceeds 255 bytes, the limit for one chat message. Longer sentences are split at
     clauses.
 - `d`: a stage direction. It is shown on the teleprompter and never spoken.
-- `e` and `s`: an emote and a spell.
+- `e` and `s`: an emote, and a list of spells (the first known is cast).
 - `at`: the role they are aimed at. The addon targets that role's player, performs the action, and
   restores your previous target. If nobody has the role, it isn't aimed at anyone.
 - `h`: marks a scene heading.

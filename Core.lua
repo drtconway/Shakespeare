@@ -119,6 +119,13 @@ function ns.KnowsSpell(name)
 	return not IsPlayerSpell or IsPlayerSpell(id)
 end
 
+-- The first of a cue's spells that the player knows, if any.
+function ns.CueSpell(cue)
+	for _, spell in ipairs(cue.s or {}) do
+		if ns.KnowsSpell(spell) then return spell end
+	end
+end
+
 -- The player to prompt, if the current cue is overdue and belongs to
 -- somebody else.
 function ns.PromptTarget()
@@ -133,7 +140,7 @@ function ns.Prompted()
 end
 
 local function HasAction(cue)
-	return cue and cue.t and (cue.e or cue.s)
+	return cue and cue.t and (cue.e or ns.CueSpell(cue))
 end
 
 -- The spoken line whose emote or spell the Emote button performs: the line

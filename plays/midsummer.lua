@@ -50,7 +50,8 @@ ns.plays["midsummer"] = {
   },
   -- r = roles who may speak it, t = text (<= 255 bytes, one chat message),
   -- d = stage direction (shown, never spoken), h = scene heading,
-  -- e = emote slash command, s = spell to cast if known (else e is used),
+  -- e = emote slash command, s = spells: the first one the player knows is
+  -- cast (else e is used),
   -- at = role the emote or spell is directed at.
   -- A cue with r but no t is stage business the role performs without speaking.
   cues = {
@@ -2090,7 +2091,7 @@ ns.plays["midsummer"] = {
     { r = {"PYRAMUS"}, t = "Tongue, lose thy light!" },
     { r = {"PYRAMUS"}, t = "Moon, take thy flight!" },
     { r = {"PYRAMUS"}, t = "Now die, die, die, die, die." },
-    { r = {"PYRAMUS"}, d = "Dies. Exit Moonshine", e = "/lie", s = "Feign Death" },
+    { r = {"PYRAMUS"}, d = "Dies. Exit Moonshine", e = "/lie", s = {"Feign Death"} },
     { r = {"DEMETRIUS"}, t = "No die, but an ace, for him; for he is but one." },
     { r = {"LYSANDER"}, t = "Less than an ace, man; for he is dead, he is nothing." },
     { r = {"THESEUS"}, t = "With the help of a surgeon he might yet recover and prove an ass." },
@@ -2127,7 +2128,7 @@ ns.plays["midsummer"] = {
     { r = {"THISBE"}, t = "And farewell, friends." },
     { r = {"THISBE"}, t = "Thus Thisbe ends." },
     { r = {"THISBE"}, t = "Adieu, adieu, adieu." },
-    { r = {"THISBE"}, d = "Dies", e = "/lie", s = "Feign Death" },
+    { r = {"THISBE"}, d = "Dies", e = "/lie", s = {"Feign Death"} },
     { r = {"THESEUS"}, t = "Moonshine and Lion are left to bury the dead." },
     { r = {"DEMETRIUS"}, t = "Ay, and Wall too." },
     { r = {"BOTTOM"}, t = "No, I assure you; the wall is down that parted their fathers." },

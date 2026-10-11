@@ -1,0 +1,16 @@
+# Emotes and spells for Romeo and Juliet; see plays/muchado.actions for the format.
+# Paris's, Romeo's and Juliet's deaths and Juliet's last kiss are picked up
+# automatically from the stage directions.
+
+# The ball (Act 1, Scene 5): two kisses, the second has no stage direction.
+ROMEO    | Kissing her                   | /kiss @Juliet
+ROMEO    | Give me my sin again          | /kiss @Juliet
+
+# Tybalt is killed (Act 3, Scene 1).
+TYBALT   | They fight; Tybalt falls      | Feign Death /lie
+
+# Juliet takes the Friar's potion (Act 4, Scene 3) and seems dead.
+JULIET   | Throws herself on the bed     | Feign Death /sleep
+
+# The tomb (Act 5, Scene 3).
+JULIET   | Kisses him                    | /kiss @Romeo

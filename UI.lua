@@ -154,7 +154,8 @@ local function RefreshScript()
 	frame.title:SetText(play.title .. DROPDOWN_ARROW)
 	titleButton:SetSize(frame.title:GetStringWidth() + 16, 24)
 	local scene = play.scenes[ns.SceneIndex(pos)]
-	frame.scene:SetText(scene and ("Act %d, Scene %d. %s"):format(scene.act, scene.scene, scene.title) or "")
+	-- The scene's heading cue, e.g. "Act 1, Scene 2. A room…" or "Act 2, Prologue".
+	frame.scene:SetText(scene and cues[scene.start].d or "")
 
 	-- Start at the last spoken line, so the cue line is always visible.
 	local first = pos - 1

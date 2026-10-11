@@ -8,5 +8,7 @@ Core.lua
 plays\muchado.lua
 plays\midsummer.lua
 plays\twelfthnight.lua
+plays\macbeth.lua
+plays\romeo.lua
 UI.lua
 Minimap.lua

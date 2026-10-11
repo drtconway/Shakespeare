@@ -36,6 +36,19 @@ PLAYS = {
         "title": "A Midsummer Night's Dream",
         "aliases": {},
     },
+    "macbeth": {
+        "title": "Macbeth",
+        "aliases": {
+            "SON": "BOY",
+            "BOTH MURDERERS": ["FIRST MURDERER", "SECOND MURDERER"],
+        },
+    },
+    "romeo": {
+        "title": "Romeo and Juliet",
+        "aliases": {
+            "PRINCE": "ESCALUS",
+        },
+    },
     "twelfthnight": {
         "title": "Twelfth Night",
         "aliases": {
@@ -48,7 +61,13 @@ PLAYS = {
     },
 }
 
-ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5}
+def roman(numeral):
+    values = {"I": 1, "V": 5, "X": 10}
+    total = 0
+    for i, ch in enumerate(numeral):
+        v = values[ch]
+        total += -v if i + 1 < len(numeral) and values[numeral[i + 1]] > v else v
+    return total
 
 # Stage directions that imply an emote (e) and/or spell (s). The spell is
 # used if the player knows it, otherwise the emote is the fallback.
@@ -105,11 +124,14 @@ def apply_overlay(play_id, cues):
     The "line" may also be the start of a stage direction, such as "Kisses
     her" or "Enter Ghost". A direction nobody performs yet becomes a cue the
     role performs. "(enters)" matches every entrance that names the role.
+    Each entry takes the first match not already taken by an earlier entry,
+    so repeating an entry reaches later occurrences of the same text.
     """
     path = Path(ROOT, "plays", f"{play_id}.actions")
     if not path.exists():
         return
     role_ids = {r for c in cues for r in c.get("r", [])}
+    taken = set()  # ids of cues matched by earlier entries
     for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = line.split("#", 1)[0].strip()
         if not line:
@@ -129,7 +151,8 @@ def apply_overlay(play_id, cues):
                 sys.exit(f"{path.name}:{n}: no entrances naming {title_case(role)!r}")
         else:
             cue = next((c for c in cues
-                        if (role in c.get("r", []) or ("r" not in c and not c.get("h")))
+                        if id(c) not in taken
+                        and (role in c.get("r", []) or ("r" not in c and not c.get("h")))
                         and normalise(c.get("t") or c.get("d", "")).startswith(normalise(prefix))),
                        None)
             if cue is None:
@@ -143,16 +166,18 @@ def apply_overlay(play_id, cues):
         for cue in matches:
             cue.setdefault("r", [role])
             cue.update(action)
+            taken.add(id(cue))
 
 ACT_RE = re.compile(r"^ACT ([IVX]+)\.?$")
 SCENE_RE = re.compile(r"^(?:SCENE|Scene) ([IVX]+)\.\s*(.*)$")
+PROLOGUE_RE = re.compile(r"^THE PROLOGUE\.?$")
 # "BENEDICK."  "DON PEDRO. Yea, marry..."  "BALTHASAR [sings.]"
 HEADING_RE = re.compile(
     r"^([A-Z][A-Z’' &]*[A-Z])(?:\.\s*(.*)|\s*\[([^\]]*)\]\.?\s*(.*))$"
 )
 ENTRANCE_RE = re.compile(r"^(Enter|Re-enter)\b")
-# Unbracketed song cues: "Clown sings."  "The Clown’s song."
-SONG_RE = re.compile(r"^(?:The )?([A-Z][a-z]+)(?:’s song| sings)\.?$")
+# Unbracketed song cues: "Clown sings."  "The Clown’s song."  "Song."
+SONG_RE = re.compile(r"^(?:(?:The )?([A-Z][a-z]+)(?:’s song| sings)|Song)\.?$")
 
 
 def nbytes(s):
@@ -169,16 +194,23 @@ def title_case(role_id):
 
 
 def read_blocks(lines):
-    """Group lines into paragraphs separated by blank lines."""
-    block = []
+    """Group lines into paragraphs separated by blank lines.
+
+    Yields (lines, indented), where indented means the paragraph's first line
+    starts with exactly one space: Gutenberg's mark for an unbracketed stage
+    direction such as " Thunder. Enter the three Witches."
+    """
+    block, indented = [], False
     for line in lines:
         if line.strip():
+            if not block:
+                indented = bool(re.match(r" \S", line))
             block.append(clean(line))
         elif block:
-            yield block
+            yield block, indented
             block = []
     if block:
-        yield block
+        yield block, indented
 
 
 def parse_personae(lines):
@@ -311,9 +343,11 @@ def convert(play_id):
 
     personae = parse_personae(lines)
 
-    # The play proper starts at the first "ACT I" after the Dramatis Personae.
+    # The play proper starts at the first "ACT I" (or opening prologue) after
+    # the Dramatis Personae.
     dp = next((i for i, l in enumerate(lines) if l.strip().startswith("Dramatis Person")), 0)
-    start = next(i for i in range(dp, len(lines)) if ACT_RE.match(lines[i].strip()))
+    start = next(i for i in range(dp, len(lines))
+                 if ACT_RE.match(lines[i].strip()) or PROLOGUE_RE.match(lines[i].strip()))
     end = next((i for i, l in enumerate(lines) if l.startswith("*** END OF")), len(lines))
     body = lines[start:end]
 
@@ -323,26 +357,45 @@ def convert(play_id):
 
     cues, scenes = [], []
     act = 0
+    in_scene = False  # whether the current act has started a scene or prologue
     speaker = None  # list of role ids
     lead = None     # direction to attach to the next speech, e.g. "sings"
     unknown = set()
 
-    for block in read_blocks(body):
+    def open_scene(number, title, heading):
+        scenes.append({"act": act, "scene": number, "title": title, "start": len(cues) + 1})
+        cues.append({"d": heading, "h": 1})
+
+    def open_prologue():
+        open_scene(0, "Prologue", f"Act {act}, Prologue" if act else "Prologue")
+
+    for block, indented in read_blocks(body):
         first = block[0]
 
         m = ACT_RE.match(first)
         if m:
-            act = ROMAN[m.group(1)]
+            act = roman(m.group(1))
+            in_scene = False
+            continue
+
+        if PROLOGUE_RE.match(first):
+            open_prologue()
+            speaker, in_scene = None, True
             continue
 
         m = SCENE_RE.match(first)
         if m:
+            number = roman(m.group(1))
             setting = " ".join([m.group(2)] + block[1:]).strip()
-            scenes.append({"act": act, "scene": ROMAN[m.group(1)], "title": setting,
-                           "start": len(cues) + 1})
-            cues.append({"d": f"Act {act}, Scene {ROMAN[m.group(1)]}. {setting}", "h": 1})
-            speaker = None
+            open_scene(number, setting, f"Act {act}, Scene {number}. {setting}")
+            speaker, in_scene = None, True
             continue
+
+        # Anything between an act heading and its first scene is a prologue,
+        # e.g. the Chorus at the start of Act 2 of Romeo and Juliet.
+        if not in_scene:
+            open_prologue()
+            speaker, in_scene = None, True
 
         if ENTRANCE_RE.match(first) or (first.startswith("[") and " ".join(block).endswith("]")
                                         and block[-1].endswith("]")
@@ -353,7 +406,15 @@ def convert(play_id):
 
         m = SONG_RE.match(first)
         if m and len(block) == 1:
-            speaker, lead = resolve(m.group(1).upper()), "sings"
+            if m.group(1):  # "Clown sings."; a bare "Song." keeps the speaker
+                speaker = resolve(m.group(1).upper())
+            lead = "sings"
+            continue
+
+        # Unbracketed directions are indented by one space. Song lyrics can be
+        # too, so not straight after a song cue.
+        if indented and lead is None:
+            cues.append({"d": " ".join(block).rstrip("."), "_speaker": speaker})
             continue
 
         m = HEADING_RE.match(first)

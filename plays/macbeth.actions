@@ -1,0 +1,22 @@
+# Emotes and spells for Macbeth; see plays/muchado.actions for the format.
+# Repeating an entry matches the next occurrence of the same text.
+#
+# Ghosts and apparitions shimmer (Fade) when they appear, so the audience
+# still sees them, and vanish (Invisibility, Stealth or Shadowmeld) when they
+# go. A rogue or night elf ghost must step out of stealth themselves before
+# rising again.
+
+# Banquo's ghost at the banquet (Act 3, Scene 4)
+BANQUO     | The Ghost of Banquo rises       | Fade
+BANQUO     | Ghost disappears                | Invisibility, Stealth, Shadowmeld
+BANQUO     | Ghost rises again               | Fade
+BANQUO     | Ghost disappears                | Invisibility, Stealth, Shadowmeld
+
+# The apparitions and the show of kings (Act 4, Scene 1)
+APPARITION | Thunder. An Apparition of an armed Head | Fade
+APPARITION | Descends                        | Invisibility, Stealth, Shadowmeld
+APPARITION | Thunder. An Apparition of a bloody Child | Fade
+APPARITION | Descends                        | Invisibility, Stealth, Shadowmeld
+APPARITION | Thunder. An Apparition of a Child crowned | Fade
+APPARITION | Descends                        | Invisibility, Stealth, Shadowmeld
+BANQUO     | A show of eight kings           | Fade

@@ -49,6 +49,9 @@ resets.
 - *Much Ado About Nothing* (`muchado`)
 - *A Midsummer Night's Dream* (`midsummer`)
 - *Twelfth Night* (`twelfthnight`)
+- *Macbeth* (`macbeth`): Banquo's ghost and the apparitions shimmer and vanish if their actors
+  have the spells.
+- *Romeo and Juliet* (`romeo`): the Chorus's prologues are scenes of their own.
 
 The texts come from Project Gutenberg.
 

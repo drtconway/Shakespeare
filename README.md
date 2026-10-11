@@ -18,7 +18,7 @@ emotes and spells: bow, kiss, swoon, or Feign Death when someone dies.
 5. **Cast it.** Click **Cast** and pick your roles. Your character announces "I will play the role
    of Benedick!" Players can take several roles. If nobody takes a role, anyone can read its lines.
 6. **Perform.** When your line is highlighted in gold, click **Speak**. If an actor misses their
-   cue, after five seconds everyone else gets a **Prompt** button to give them a poke.
+   cue, after five seconds everyone else's **Prompt** button lights up to give them a poke.
 
 Someone who joins the group mid-play picks up the play, the place and the cast from the group
 leader.
@@ -33,7 +33,7 @@ leader.
 | **Emote** | Do the emote or spell for your line: the one you've just spoken (until the next line is delivered), or the one you're about to speak. Aimed emotes target the other actor automatically. |
 | **Auto emotes** | When ticked, **Speak** does the emote too. |
 | **Troll speak** / **Dwarf speak** | Shown to trolls and dwarves. When ticked, your lines are spoken in your race's dialect ("Is dis a dagger…", "Aye, lad"). Your lines on the teleprompter show how they'll sound. |
-| **Prompt** | Appears when an actor is five seconds late. Pokes, coughs or sighs at them. |
+| **Prompt** | Lights up when an actor is five seconds late. Pokes, coughs or sighs at them (hover to see who). |
 | `<<` `>>` | Go to the start or end of the scene. Click again for the previous or next scene. |
 | `<` `>` | Step back or forward one line, to recover from a mistake. |
 | **Reset** | Clear the cast and go back to the start of the play (asks first). |
@@ -187,7 +187,7 @@ different play data ignore each other.
 | `PLAY`                  | sender starts this play from the top with an empty cast         |
 | `SYNC?`                 | a newcomer to the group asks for the current state              |
 | `POS <n>`               | leader's reply to `SYNC?`: the play (from the key) and position |
-| `HOLD <player> <roles>` | leader's reply to `SYNC?`: comma-separated roles one player holds |
+| `HOLD <player>;<roles>` | leader's reply to `SYNC?`: comma-separated roles one player holds |
 
 `CUE n` sets the position to the later of where it is now and just after cue n, so duplicate or
 late messages are harmless.

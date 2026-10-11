@@ -13,7 +13,7 @@ ns.DIALECTS = {
 		tag = "mon",   -- added to the end of about one line in eight
 		words = {
 			the = "da", this = "dis", that = "dat", these = "dese", those = "dose",
-			they = "dey", them = "dem", there = "dere", their = "deir", then = "den",
+			they = "dey", them = "dem", there = "dere", their = "deir", ["then"] = "den",  -- "then" is a Lua keyword
 			think = "tink", thinking = "tinkin'", thought = "tought",
 			thing = "ting", things = "tings",
 			nothing = "nuttin'", something = "someting", anything = "anyting",

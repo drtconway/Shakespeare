@@ -17,13 +17,31 @@ local function Print(...)
 end
 ns.Print = Print
 
+-- Our name as other players' messages show it. With Forever's regional
+-- unique names, UnitName returns a first name and a surname ("Staph",
+-- "Pneumo") while messages come from "Staph Pneumo".
 local function Me()
-	return (UnitName("player"))
+	local name, surname = UnitName("player")
+	if surname and surname ~= "" then
+		local consts = Constants and Constants.CharacterNameSeparatorConsts
+		local separator = consts and consts.CHARACTERNAME_SURNAME_SEPARATOR or " "
+		name = name .. separator .. surname
+	end
+	return name
 end
 ns.Me = Me
 
 local function Short(name)
 	return name and Ambiguate(name, "none")
+end
+
+-- A name without any "-Realm" suffix, for comparing names.
+local function BaseName(name)
+	return (name:gsub("%-.*$", ""))
+end
+
+function ns.IsMe(name)
+	return name ~= nil and BaseName(name) == BaseName(Me())
 end
 
 ---------------------------------------------------------------------------
@@ -96,7 +114,7 @@ end
 -- True if one of the cue's roles is cast to us.
 function ns.IsMine(cue)
 	for _, player in ipairs(ns.Performers(cue)) do
-		if player == Me() then return true end
+		if ns.IsMe(player) then return true end
 	end
 	return false
 end
@@ -267,7 +285,7 @@ function ns.Cast(role)
 end
 
 function ns.Uncast(role)
-	if db.cast[role] ~= Me() then return end
+	if not ns.IsMe(db.cast[role]) then return end
 	db.cast[role] = nil
 	ns.Refresh()
 	Send("UNCAST", role)
@@ -324,7 +342,7 @@ end
 local function OnAddonMessage(prefix, msg, _, sender)
 	if prefix ~= PREFIX then return end
 	sender = Short(sender)
-	if sender == Me() then return end
+	if ns.IsMe(sender) then return end
 
 	local key, command, arg = msg:match("^(%S+) (%S+) ?(.*)$")
 	if not key then return end
@@ -338,7 +356,7 @@ local function OnAddonMessage(prefix, msg, _, sender)
 			byPlayer[player] = byPlayer[player] and (byPlayer[player] .. "," .. role) or role
 		end
 		for player, roles in pairs(byPlayer) do
-			Send("HOLD", player .. " " .. roles)
+			Send("HOLD", player .. ";" .. roles)
 		end
 		return
 	end
@@ -378,7 +396,8 @@ local function OnAddonMessage(prefix, msg, _, sender)
 	elseif command == "UNCAST" then
 		if db.cast[arg] == sender then CastTo(arg, nil) end
 	elseif command == "HOLD" then
-		local player, roles = arg:match("^(%S+) (.+)$")
+		-- "Staph Pneumo;MACBETH,DON PEDRO": names and roles may contain spaces.
+		local player, roles = arg:match("^(.-);(.+)$")
 		for role in (roles or ""):gmatch("[^,]+") do
 			CastTo(role, player)
 		end
@@ -394,7 +413,7 @@ end
 local function OnSay(text, sender)
 	sender = Short(sender)
 	local play = ns.Play()
-	if sender == Me() or not play then return end
+	if ns.IsMe(sender) or not play then return end
 
 	local name = text:match(CAST_PATTERN)
 	if name then

@@ -95,7 +95,7 @@ local function ActionMacro(cue)
 	local action = spell and ("/cast " .. spell) or cue.e
 	if action and cue.at then
 		local player = ns.State().cast[cue.at]
-		if player and player ~= ns.Me() then
+		if player and not ns.IsMe(player) then
 			action = "/target " .. player .. "\n" .. action .. "\n/targetlasttarget"
 		else
 			-- Nobody to aim at: don't aim it at whoever happens to be targeted.
@@ -169,9 +169,10 @@ local function RefreshSecure()
 		if target then
 			local emote = PROMPT_EMOTES[math.random(#PROMPT_EMOTES)]
 			prompt:SetAttribute("macrotext", "/target " .. target .. "\n" .. emote)
-			prompt:SetText("Prompt " .. target)
+		else
+			prompt:SetAttribute("macrotext", "")
 		end
-		prompt:SetShown(target ~= nil)
+		prompt:SetEnabled(target ~= nil)
 	end
 end
 
@@ -226,7 +227,7 @@ local function RefreshCast()
 		row.role = role
 		row.label:SetText(role.name .. " |cff9d9d9d(" .. role.cues .. ")|r")
 		local player = state.cast[role.id]
-		if player == ns.Me() then
+		if ns.IsMe(player) then
 			row.player:SetText("|cff40ff40" .. player .. "|r")
 		else
 			row.player:SetText(player or "|cff9d9d9d-|r")
@@ -389,7 +390,7 @@ function ns.CreateCastRow(i)
 
 	row:SetScript("OnClick", function(self)
 		local id, holder = self.role.id, ns.State().cast[self.role.id]
-		if holder == ns.Me() then
+		if ns.IsMe(holder) then
 			ns.Uncast(id)
 		elseif not holder or IsShiftKeyDown() then
 			ns.Cast(id)
@@ -585,7 +586,20 @@ function ns.CreateUI()
 			RefreshSecure()
 		end
 	end)
-	prompt:Hide()
+	-- Always shown; enabled only while an actor is late.
+	prompt:SetText("Prompt")
+	prompt:SetEnabled(false)
+	prompt:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		if self.target then
+			GameTooltip:AddLine("Prompt " .. self.target)
+		else
+			GameTooltip:AddLine("Prompt")
+			GameTooltip:AddLine("Lights up when an actor is five seconds late with their line.", 1, 1, 1, true)
+		end
+		GameTooltip:Show()
+	end)
+	prompt:SetScript("OnLeave", GameTooltip_Hide)
 
 	castPanel = CreateFrame("Frame", nil, frame, BACKDROP_TEMPLATE)
 	castPanel:SetWidth(240)

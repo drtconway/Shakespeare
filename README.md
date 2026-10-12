@@ -11,8 +11,10 @@ calls for a toast or a poisoned cup.
 
 ## Putting on a play
 
-1. **Install.** Put the `Shakespeare` folder in your `Interface\AddOns` folder and restart the game.
-   Every actor needs the addon, and the same version of it.
+1. **Install.** In WowUp, choose *Get Addons → Install from URL* and enter
+   `https://github.com/drtconway/Shakespeare`. Or download the zip from the
+   [releases page](https://github.com/drtconway/Shakespeare/releases) and unzip it into your
+   `Interface\AddOns` folder. Every actor needs the addon, and the same version of it.
 2. **Form a group.** Everyone in the play joins the same party or raid. This is how the actors'
    teleprompters keep in step. Your audience doesn't need to be in the group, or have the addon.
 3. **Open the teleprompter** with the harp button on the minimap, or type `/bard`.
@@ -72,6 +74,8 @@ Core.lua                 play state, casting, sync over addon messages, slash co
 UI.lua                   teleprompter window and its buttons, cast list, play chooser
 Minimap.lua              minimap button
 Bindings.xml             key binding for the Speak button
+.pkgmeta                 what the release zip leaves out
+.github/workflows/       builds and publishes a release when a version tag is pushed
 media/harp.tga           minimap icon, drawn by tools/make_icon.py
 plays/<id>.lua           generated play data, one file per play
 plays/<id>.actions       hand-written emotes, spells and targets for lines
@@ -79,6 +83,15 @@ plays/<id>.txt           Project Gutenberg source text (not in git)
 tools/convert_play.py    converts plays/<id>.txt (+ .actions) to plays/<id>.lua
 tools/make_icon.py       draws media/harp.tga
 ```
+
+### Releasing
+
+Push a version tag: `git tag -a v1.1.0 -m "Shakespeare 1.1.0" && git push origin v1.1.0`.
+- **The workflow:** `.github/workflows/release.yml` runs the BigWigs packager.
+- **The zip:** the packager builds `Shakespeare-<tag>.zip`, leaving out what `.pkgmeta` lists (the
+  tools, emotes files and play texts).
+- **The version:** it replaces `@project-version@` in the `.toc` with the tag.
+- **The release:** it publishes a GitHub release with the zip and a `release.json` for WowUp.
 
 ### Adding a play
 

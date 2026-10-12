@@ -1,0 +1,8 @@
+# BigWigs packager settings (see .github/workflows/release.yml).
+package-as: Shakespeare
+
+# Only what the game loads goes in the zip.
+ignore:
+  - tools
+  - plays/*.actions
+  - plays/*.txt

@@ -86,7 +86,14 @@ tools/make_icon.py       draws media/harp.tga
 
 ### Releasing
 
-Push a version tag: `git tag -a v1.1.0 -m "Shakespeare 1.1.0" && git push origin v1.1.0`.
+Work happens on `dev`; `main` is protected and only changes through pull requests. To release:
+
+1. Open a pull request from `dev` to `main` on GitHub and merge it.
+2. Tag the merged `main`:
+   `git switch main && git pull && git tag -a v1.1.0 -m "Shakespeare 1.1.0" && git push origin v1.1.0`,
+   then `git switch dev` to carry on.
+
+Pushing the tag does the rest:
 - **The workflow:** `.github/workflows/release.yml` runs the BigWigs packager.
 - **The zip:** the packager builds `Shakespeare-<tag>.zip`, leaving out what `.pkgmeta` lists (the
   tools, emotes files and play texts).

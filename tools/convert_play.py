@@ -108,8 +108,18 @@ def parse_action(spec, role_ids):
     '/kiss @Beatrice' -> emote directed at the player cast as Beatrice;
     'wield dagger' -> equip and draw a dagger, if the player has one;
     'use Flask of Port, Refreshing Spring Water' -> use the first of these
-    items the player has."""
+    items the player has;
+    'duel @Tybalt' -> challenge Tybalt's player to a duel (stage fight);
+    'yield' -> forfeit the duel this role is in."""
     spec, _, target = spec.partition("@")
+    flags = {}
+    for word in ("duel", "yield"):
+        m = re.search(r"\b" + word + r"\b", spec)
+        if m:
+            flags[word] = True
+            spec = spec[:m.start()] + spec[m.end():]
+    if flags.get("duel") and not target.strip():
+        raise ValueError("'duel' needs an opponent, e.g. 'duel @Tybalt'")
     items = []
     m = re.search(r"\buse ([^/]+)", spec)
     if m:
@@ -135,6 +145,7 @@ def parse_action(spec, role_ids):
         out["w"] = wield
     if items:
         out["u"] = items
+    out.update(flags)
     target = target.strip().upper()
     if target:
         if target not in role_ids:
@@ -555,6 +566,7 @@ def to_lua(play):
         "  -- cast (else e is used),",
         "  -- w = kind of weapon to equip and draw, if the player has one,",
         "  -- u = items: the first one the player has is used,",
+        "  -- duel = challenge the `at` role's player to a duel, yield = forfeit it,",
         "  -- at = role the emote or spell is directed at.",
         "  -- A cue with r but no t is stage business the role performs without speaking.",
         "  cues = {",
@@ -575,6 +587,10 @@ def to_lua(play):
             fields.append(f"w = {lua_str(c['w'])}")
         if "u" in c:
             fields.append("u = {" + ", ".join(lua_str(i) for i in c["u"]) + "}")
+        if c.get("duel"):
+            fields.append("duel = true")
+        if c.get("yield"):
+            fields.append("yield = true")
         if "at" in c:
             fields.append(f"at = {lua_str(c['at'])}")
         if "h" in c:

@@ -282,6 +282,72 @@ function ns.Deliver(n)
 	myLastCue = n
 	ApplyCue(n)
 	Send("CUE", n)
+	local cue = ns.Play().cues[n]
+	if cue.duel then ns.StageFight(cue) end
+	if cue.yield then ns.Yield() end
+end
+
+---------------------------------------------------------------------------
+-- Stage fights. A duel cue (cue.duel) challenges the player cast in
+-- cue.at; their addon accepts a request from the expected challenger, and
+-- the scripted loser forfeits on a yield cue. Both need "Stage duels" ticked.
+-- Where duels aren't allowed (cities), the fight is still played as stage
+-- combat: weapons drawn and a threat.
+---------------------------------------------------------------------------
+
+local DUEL_WINDOW = 4  -- cues before the current one a duel request may answer
+local dueling = false
+
+-- GetSheathState: 1 sheathed, 2 melee drawn, 3 ranged drawn.
+function ns.DrawWeapon()
+	if GetSheathState and ToggleSheath and GetSheathState() ~= 2 then
+		ToggleSheath()
+	end
+end
+
+-- Emote by slash command ("/lie"), usable in combat when macros are frozen.
+function ns.Emote(slash)
+	local token = hash_EmoteTokenList and hash_EmoteTokenList[slash:upper()]
+	DoEmote(token or slash:sub(2):upper())
+end
+
+function ns.StageFight(cue)
+	ns.DrawWeapon()
+	DoEmote("THREATEN")
+	local opponent = db.cast[cue.at]
+	if db.stageDuels and opponent and not ns.IsMe(opponent) then
+		StartDuel(opponent)
+		dueling = true
+	end
+end
+
+function ns.Yield()
+	if dueling then
+		ForfeitDuel()
+		dueling = false
+	end
+end
+
+-- Accept a duel only if the script calls for it: a recent duel cue aimed at
+-- one of our roles, delivered by the challenger.
+local function OnDuelRequested(challenger)
+	local play = ns.Play()
+	if not db.stageDuels or not play or not challenger then return end
+	for i = math.max(1, db.pos - DUEL_WINDOW), math.min(#play.cues, db.pos) do
+		local cue = play.cues[i]
+		if cue.duel and ns.IsMe(db.cast[cue.at]) then
+			for _, role in ipairs(cue.r) do
+				local player = db.cast[role]
+				if player and BaseName(player) == BaseName(challenger) then
+					AcceptDuel()
+					StaticPopup_Hide("DUEL_REQUESTED")
+					dueling = true
+					ns.DrawWeapon()
+					return
+				end
+			end
+		end
+	end
 end
 
 function ns.Goto(i)
@@ -488,6 +554,14 @@ events:SetScript("OnEvent", function(_, event, ...)
 		OnAddonMessage(...)
 	elseif event == "CHAT_MSG_SAY" then
 		OnSay(...)
+	elseif event == "DUEL_REQUESTED" then
+		OnDuelRequested(...)
+	elseif event == "DUEL_FINISHED" then
+		dueling = false
+	elseif event == "PLAYER_REGEN_DISABLED" then
+		-- Last chance to change secure buttons before combat (e.g. a duel)
+		-- freezes them.
+		ns.EnterCombat()
 	elseif event == "PLAYER_REGEN_ENABLED" or event == "BAG_UPDATE_DELAYED"
 			or event == "PLAYER_EQUIPMENT_CHANGED" then
 		-- Combat ended, or the weapons a cue could wield may have changed.
@@ -496,7 +570,8 @@ events:SetScript("OnEvent", function(_, event, ...)
 end)
 
 for _, event in ipairs({ "PLAYER_LOGIN", "GROUP_ROSTER_UPDATE", "CHAT_MSG_ADDON",
-		"CHAT_MSG_SAY", "PLAYER_REGEN_ENABLED", "BAG_UPDATE_DELAYED",
+		"CHAT_MSG_SAY", "DUEL_REQUESTED", "DUEL_FINISHED", "PLAYER_REGEN_DISABLED",
+		"PLAYER_REGEN_ENABLED", "BAG_UPDATE_DELAYED",
 		"PLAYER_EQUIPMENT_CHANGED" }) do
 	events:RegisterEvent(event)
 end

@@ -61,9 +61,11 @@ local function ActionText(cue)
 		-- The first choice stands for the rest, e.g. "use Bottle of Pinot Noir…".
 		parts[#parts + 1] = "use " .. cue.u[1] .. (#cue.u > 1 and "…" or "")
 	end
-	if #parts == 0 then return "" end
 	local text = table.concat(parts, " or ")
-	if cue.at then text = text .. " at " .. ns.RoleName(cue.at) end
+	if cue.at and #parts > 0 then text = text .. " at " .. ns.RoleName(cue.at) end
+	if cue.duel then text = (text ~= "" and text .. "; " or "") .. "duel " .. ns.RoleName(cue.at) end
+	if cue.yield then text = (text ~= "" and text .. "; " or "") .. "yield" end
+	if text == "" then return "" end
 	return "  |cff66bbff<" .. text .. ">|r"
 end
 
@@ -117,13 +119,8 @@ local function DrawsWeapon(cue)
 	return cue and cue.w and ns.WieldMacro(cue.w) ~= nil
 end
 
--- Equipping is done by the button's macro; drawing it is done here, after.
--- GetSheathState: 1 sheathed, 2 melee drawn, 3 ranged drawn.
-local function DrawWeapon()
-	if GetSheathState and ToggleSheath and GetSheathState() ~= 2 then
-		ToggleSheath()
-	end
-end
+-- Equipping is done by the button's macro; drawing it is done after.
+local DrawWeapon = ns.DrawWeapon
 
 local function ActionLabel(cue)
 	local label = ns.CueSpell(cue) or cue.e
@@ -245,6 +242,22 @@ local function RefreshCast()
 		castRows[i]:Hide()
 	end
 	castPanel:SetHeight(48 + #play.roles * 16)
+end
+
+-- Called on PLAYER_REGEN_DISABLED, the last moment secure buttons can be
+-- changed before combat (e.g. a stage duel) freezes them. Clear their macros
+-- and leave Speak and Emote enabled; their click handlers then decide what
+-- to do, speaking and emoting directly. Refresh restores them afterwards.
+function ns.EnterCombat()
+	if not frame then return end
+	for _, button in ipairs({ deliver, emote, prompt }) do
+		button:SetAttribute("macrotext", "")
+	end
+	deliver:SetEnabled(true)
+	emote:SetEnabled(true)
+	prompt:SetEnabled(false)
+	prompt.target = nil
+	deliver.drawsWeapon, emote.drawsWeapon = false, false
 end
 
 function ns.Refresh()
@@ -531,6 +544,10 @@ function ns.CreateUI()
 		"Let lines use items from your bags, e.g. drinking Refreshing Spring Water. Items are used up.",
 		"useItems", true)
 
+	local stageDuels = Checkbox("Stage duels",
+		"Fights in the play become real duels with the other actor, if they tick this too. The script decides who loses. Duels aren't allowed in cities.",
+		"stageDuels", false)
+
 	-- Only players whose race has a dialect get the option to speak in it.
 	local dialect = ns.DIALECTS[select(2, UnitRace("player"))]
 	local useDialect = dialect and Checkbox(dialect.label,
@@ -546,6 +563,11 @@ function ns.CreateUI()
 		self.cueIndex = ns.State().pos
 		if cue.t then
 			SendChatMessage(ns.Speech((cue.t:gsub("\n", " "))), "SAY")
+		end
+		-- In combat the macro is frozen (and was cleared on entering combat),
+		-- so do the cue's emote directly; spells and items have to wait.
+		if InCombatLockdown() and cue.e and (not cue.t or ns.State().autoEmote) then
+			ns.Emote(cue.e)
 		end
 	end)
 	-- Advance only after the secure macro (emote or spell) for this cue has run.
@@ -575,6 +597,11 @@ function ns.CreateUI()
 		GameTooltip:Show()
 	end)
 	emote:SetScript("OnLeave", GameTooltip_Hide)
+	emote:SetScript("PreClick", function(_, _, down)
+		if not ClickIsLive(down) or not InCombatLockdown() then return end
+		local cue = ns.EmoteCue()
+		if cue and cue.e then ns.Emote(cue.e) end
+	end)
 	emote:SetScript("PostClick", function(self, _, down)
 		if ClickIsLive(down) and self.drawsWeapon then DrawWeapon() end
 	end)
@@ -590,6 +617,7 @@ function ns.CreateUI()
 	autoEmote:SetPoint("BOTTOMLEFT", emote, "TOPLEFT", 0, 2)
 	if useDialect then useDialect:SetPoint("BOTTOMLEFT", deliver, "TOPLEFT", 0, 2) end
 	useItems:SetPoint("BOTTOMLEFT", prompt, "TOPLEFT", 0, 2)
+	stageDuels:SetPoint("BOTTOMLEFT", castButton, "TOPLEFT", 0, 2)
 	prompt:SetScript("PostClick", function(_, _, down)
 		if ClickIsLive(down) then
 			ns.Prompted()

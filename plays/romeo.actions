@@ -6,13 +6,27 @@
 ROMEO    | Kissing her                   | /kiss @Juliet
 ROMEO    | Give me my sin again          | /kiss @Juliet
 
-# Tybalt is killed (Act 3, Scene 1).
-TYBALT   | They fight; Tybalt falls      | Feign Death /lie
+# Stage fights: "duel @Role" challenges that role's player to a real duel
+# (where duels are allowed); "yield" forfeits it when the script says so.
+
+# The opening brawl (Act 1, Scene 1); the Prince parts them, so Benvolio
+# yields once it's over.
+TYBALT   | Have at thee, coward          | duel @Benvolio
+BENVOLIO | Here were the servants        | yield
+
+# Mercutio is wounded, then Tybalt is killed (Act 3, Scene 1).
+MERCUTIO | Come, sir, your passado        | duel @Tybalt
+MERCUTIO | I am hurt                     | yield
+ROMEO    | This shall determine that     | duel @Tybalt
+TYBALT   | They fight; Tybalt falls      | yield Feign Death /lie
 
 # Juliet takes the Friar's potion (Act 4, Scene 3) and seems dead.
 JULIET   | Romeo, Romeo, Romeo, here’s drink | use Refreshing Spring Water
 JULIET   | Throws herself on the bed     | Feign Death /sleep
 
-# The tomb (Act 5, Scene 3). Romeo drinks the poison; water, not wine.
+# The tomb (Act 5, Scene 3). Romeo kills Paris, then drinks the poison;
+# water, not wine.
+ROMEO    | Wilt thou provoke me          | duel @Paris
+PARIS    | O, I am slain                 | yield
 ROMEO    | O true apothecary             | use Refreshing Spring Water
 JULIET   | Kisses him                    | /kiss @Romeo

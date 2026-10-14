@@ -6,3 +6,4 @@ ignore:
   - tools
   - plays/*.actions
   - plays/*.txt
+  - BUGS.md
